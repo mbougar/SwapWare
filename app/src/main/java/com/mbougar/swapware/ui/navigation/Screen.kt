@@ -15,8 +15,17 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object AdDetail : Screen("ad_detail/{adId}", "Details", Icons.Default.List) {
         fun createRoute(adId: String) = "ad_detail/$adId"
     }
-    object ChatDetail : Screen("chat_detail/{conversationId}", "Chat", Icons.Default.Email) { // TODO() Add chat icon
-        fun createRoute(conversationId: String) = "chat_detail/$conversationId"
+    object ChatDetail : Screen(
+        route = "chat_detail/{conversationId}/{otherUserEmail}/{adTitle}",
+        title = "Chat",
+        icon = Icons.Default.Email //TODO cambiar a icono chat
+    ) {
+        fun createRoute(conversationId: String, otherUserEmail: String, adTitle: String): String {
+            // Encode es necesario para poder afrontar caracteres especiales
+            val encodedEmail = java.net.URLEncoder.encode(otherUserEmail, "UTF-8")
+            val encodedTitle = java.net.URLEncoder.encode(adTitle, "UTF-8")
+            return "chat_detail/$conversationId/$encodedEmail/$encodedTitle"
+        }
     }
 }
 

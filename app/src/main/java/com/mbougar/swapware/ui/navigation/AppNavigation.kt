@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier // Add Modifier import
 import androidx.navigation.NavHostController
@@ -16,8 +17,10 @@ import com.mbougar.swapware.ui.screens.auth.LoginScreen
 import com.mbougar.swapware.ui.screens.details.AdDetailScreen
 import com.mbougar.swapware.ui.screens.favorites.FavoritesScreen
 import com.mbougar.swapware.ui.screens.home.HomeScreen
+import com.mbougar.swapware.ui.screens.messages.ChatDetailScreen
 import com.mbougar.swapware.ui.screens.messages.MessagesScreen
 import com.mbougar.swapware.ui.screens.profile.ProfileScreen
+import java.net.URLDecoder
 
 
 @Composable
@@ -74,16 +77,31 @@ fun AppNavHost(
         }
         composable(
             route = Screen.ChatDetail.route,
-            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("conversationId") { type = NavType.StringType },
+                navArgument("otherUserEmail") { type = NavType.StringType },
+                navArgument("adTitle") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val conversationId = backStackEntry.arguments?.getString("conversationId")
-            requireNotNull(conversationId) { "Conversation ID is required for Chat Detail" }
+            val encodedEmail = backStackEntry.arguments?.getString("otherUserEmail")
+            val encodedTitle = backStackEntry.arguments?.getString("adTitle")
 
-            // --- Placeholder: Implement ChatDetailScreen later ---
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Chat Detail Screen for ID: $conversationId (Not Implemented)")
-            }
-            // TODO cambiar por ChatDetail
+            //TODO cambiar errores
+            requireNotNull(conversationId) { "Conversation ID is required" }
+            requireNotNull(encodedEmail) { "Other user email is required" }
+            requireNotNull(encodedTitle) { "Ad title is required" }
+
+            // Decode the parameters
+            val otherUserEmail = remember(encodedEmail) { URLDecoder.decode(encodedEmail, "UTF-8") }
+            val adTitle = remember(encodedTitle) { URLDecoder.decode(encodedTitle, "UTF-8") }
+
+            ChatDetailScreen(
+                conversationId = conversationId,
+                otherUserEmail = otherUserEmail,
+                adTitle = adTitle,
+                navController = navController
+            )
         }
         // TODO añadir settings?
     }

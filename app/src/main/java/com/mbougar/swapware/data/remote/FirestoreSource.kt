@@ -1,11 +1,13 @@
 package com.mbougar.swapware.data.remote
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.snapshots // For Flow support
 import com.google.firebase.firestore.ktx.toObject // For object mapping
 import com.mbougar.swapware.data.model.Ad
 import com.mbougar.swapware.data.model.Conversation
+import com.mbougar.swapware.data.model.Message
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -57,6 +59,64 @@ class FirestoreSource @Inject constructor(
             .map { snapshot ->
                 snapshot.toObjects(Conversation::class.java)
             }
+    }
+
+    fun getMessagesStream(conversationId: String): Flow<List<Message>> {
+        return conversationsCollection
+            .document(conversationId)
+            .collection("messages")
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.toObjects(Message::class.java)
+            }
+    }
+
+    suspend fun sendMessage(conversationId: String, message: Message): Result<Unit> {
+        return try {
+            conversationsCollection
+                .document(conversationId)
+                .collection("messages")
+                .add(message)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateConversationSummary(
+        conversationId: String,
+        lastMessageSnippet: String,
+        timestamp: Timestamp
+    ): Result<Unit> {
+        return try {
+            conversationsCollection
+                .document(conversationId)
+                .update(
+                    mapOf(
+                        "lastMessageSnippet" to lastMessageSnippet,
+                        "lastMessageTimestamp" to timestamp
+                    )
+                ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getConversationDetails(conversationId: String): Result<Conversation> {
+        return try {
+            val doc = conversationsCollection.document(conversationId).get().await()
+            val conversation = doc.toObject<Conversation>()
+            if (conversation != null) {
+                Result.success(conversation)
+            } else {
+                Result.failure(Exception("Conversation not found"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     // TODO Funciones a implementar

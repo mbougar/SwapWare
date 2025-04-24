@@ -38,9 +38,7 @@ fun MessagesScreen(
         MessagesContent(
             modifier = Modifier.padding(paddingValues),
             uiState = uiState,
-            onConversationClick = { conversationId ->
-                navController.navigate(Screen.ChatDetail.createRoute(conversationId))
-            },
+            navController = navController,
             onRefresh = { viewModel.refresh() } // TODO refresh aqui tambien?
         )
     }
@@ -50,7 +48,7 @@ fun MessagesScreen(
 fun MessagesContent(
     modifier: Modifier = Modifier,
     uiState: MessagesUiState,
-    onConversationClick: (String) -> Unit,
+    navController: NavController,
     onRefresh: () -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -80,10 +78,27 @@ fun MessagesContent(
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     items(uiState.conversations, key = { it.id }) { conversation ->
+                        val otherParticipantEmail = remember(conversation.participantIds, uiState.currentUserId) {
+                            val otherIdIndex = conversation.participantIds.indexOfFirst { id -> id != uiState.currentUserId }
+                            if (otherIdIndex != -1 && otherIdIndex < conversation.participantEmails.size) {
+                                conversation.participantEmails[otherIdIndex]
+                            } else {
+                                "Unknown User"
+                            }
+                        }
+
                         ConversationItem(
                             conversation = conversation,
                             currentUserId = uiState.currentUserId ?: "",
-                            onClick = { onConversationClick(conversation.id) }
+                            onClick = {
+                                navController.navigate(
+                                    Screen.ChatDetail.createRoute(
+                                        conversationId = conversation.id,
+                                        otherUserEmail = otherParticipantEmail,
+                                        adTitle = conversation.adTitle
+                                    )
+                                )
+                            }
                         )
                         Divider()
                     }

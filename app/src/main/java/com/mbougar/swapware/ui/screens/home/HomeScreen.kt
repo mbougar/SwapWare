@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mbougar.swapware.data.model.Ad
+import com.mbougar.swapware.data.model.HardwareCategory
 import com.mbougar.swapware.ui.navigation.Screen
 import com.mbougar.swapware.viewmodel.HomeUiState
 import com.mbougar.swapware.viewmodel.HomeViewModel
@@ -143,7 +144,6 @@ fun FilterMenu(
     onCategorySelected: (String?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val categories = listOf("Electronics", "Furniture", "Vehicles", "Clothing", "Other")
 
     Box {
         IconButton(onClick = { expanded = true }) {
@@ -160,11 +160,11 @@ fun FilterMenu(
                     expanded = false
                 }
             )
-            categories.forEach { category ->
+            HardwareCategory.entries.forEach { category ->
                 DropdownMenuItem(
-                    text = { Text(category) },
+                    text = { Text(category.displayName) },
                     onClick = {
-                        onCategorySelected(category)
+                        onCategorySelected(category.displayName)
                         expanded = false
                     }
                 )

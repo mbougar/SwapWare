@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.mbougar.swapware.data.model.HardwareCategory
 import com.mbougar.swapware.viewmodel.AddAdViewModel
 import kotlinx.coroutines.launch
 
@@ -100,13 +101,7 @@ fun AddAdScreen(
                 singleLine = true
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                label = { Text("Category") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            CategoryDropdown(category) { category = it }
             Spacer(Modifier.height(16.dp))
 
             Box(
@@ -146,6 +141,49 @@ fun AddAdScreen(
                 } else {
                     Text("Post Ad")
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryDropdown(
+    category: String,
+    onCategoryChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = category,
+            onValueChange = {},
+            label = { Text("Category") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            singleLine = true,
+            readOnly = true,
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            }
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            HardwareCategory.entries.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item.displayName) },
+                    onClick = {
+                        onCategoryChange(item.displayName)
+                        expanded = false
+                    }
+                )
             }
         }
     }

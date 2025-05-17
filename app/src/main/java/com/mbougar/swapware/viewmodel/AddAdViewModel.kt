@@ -33,7 +33,6 @@ class AddAdViewModel @Inject constructor(
         category: String,
         imageUri: Uri?
     ) {
-        // Basic Validation
         val price = priceStr.toDoubleOrNull()
         if (title.isBlank() || description.isBlank() || price == null || category.isBlank()) {
             _uiState.value = AddAdUiState(error = "Please fill all fields correctly.")

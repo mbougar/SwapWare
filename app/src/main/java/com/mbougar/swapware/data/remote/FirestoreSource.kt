@@ -119,13 +119,41 @@ class FirestoreSource @Inject constructor(
         }
     }
 
+    suspend fun createConversation(conversation: Conversation): Result<String> {
+        return try {
+            val documentRef = conversationsCollection.add(conversation).await()
+            Result.success(documentRef.id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun findConversation(adId: String, user1Id: String, user2Id: String): Result<Conversation?> {
+        return try {
+            val participantsSorted = listOf(user1Id, user2Id).sorted()
+
+            val querySnapshot = conversationsCollection
+                .whereEqualTo("adId", adId)
+                .whereEqualTo("participantIds", participantsSorted)
+                .limit(1)
+                .get()
+                .await()
+
+            val conversation = querySnapshot.documents.firstOrNull()?.toObject(Conversation::class.java)
+            Result.success(conversation)
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // TODO Funciones a implementar
     /*
-    suspend fun createConversation(conversation: Conversation): Result<String> { ... }
-    suspend fun sendMessage(conversationId: String, message: Message): Result<Unit> { ... }
-    fun getMessagesStream(conversationId: String): Flow<List<Message>> { ... }
-    suspend fun updateConversationSummary(conversationId: String, lastMessage: Message) { ... }
+    suspend fun createConversation(conversation: Conversation): Result<String> {  }
+    suspend fun sendMessage(conversationId: String, message: Message): Result<Unit> {  }
+    fun getMessagesStream(conversationId: String): Flow<List<Message>> {  }
+    suspend fun updateConversationSummary(conversationId: String, lastMessage: Message) {  }
     */
 
-    // Implementar tambien fetching de user profiles, messages...
+    // TODO () Implementar tambien fetching de user profiles, messages...
 }

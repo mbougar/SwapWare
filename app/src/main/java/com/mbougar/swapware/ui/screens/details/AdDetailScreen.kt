@@ -19,8 +19,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.mbougar.swapware.ui.navigation.Screen
 import com.mbougar.swapware.viewmodel.AdDetailUiState
 import com.mbougar.swapware.viewmodel.AdDetailViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +32,41 @@ fun AdDetailScreen(
     viewModel: AdDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.navigateToConversationId) {
+        uiState.navigateToConversationId?.let { conversationId ->
+            val ad = uiState.ad
+            if (ad != null) {
+                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                val otherUserEmail = if (ad.sellerId == currentUser?.uid) {
+                    "Error"
+                } else {
+                    ad.sellerEmail
+                }
+
+                navController.navigate(
+                    Screen.ChatDetail.createRoute(
+                        conversationId = conversationId,
+                        otherUserEmail = otherUserEmail,
+                        adTitle = ad.title
+                    )
+                )
+                viewModel.navigationOrErrorHandled()
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.conversationError) {
+        uiState.conversationError?.let { error ->
+            scope.launch {
+                snackbarHostState.showSnackbar("Error: $error")
+            }
+            viewModel.navigationOrErrorHandled()
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -52,15 +89,16 @@ fun AdDetailScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         AdDetailContent(
             modifier = Modifier.padding(paddingValues),
             uiState = uiState,
-            onContactSeller = { email ->
-                // TODO: Implement contact action (e.g., open email client)
-                println("Contact seller: $email")
-            }
+            onContactSeller = {
+                viewModel.initiateConversation()
+            },
+            isContactingSeller = uiState.isInitiatingConversation
         )
     }
 }
@@ -69,7 +107,8 @@ fun AdDetailScreen(
 fun AdDetailContent(
     modifier: Modifier = Modifier,
     uiState: AdDetailUiState,
-    onContactSeller: (String) -> Unit
+    onContactSeller: () -> Unit,
+    isContactingSeller: Boolean
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when {
@@ -126,10 +165,21 @@ fun AdDetailContent(
                     Text("Seller: ${ad.sellerEmail}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    Spacer(modifier = Modifier.height(24.dp))
+
                     Button(
-                        onClick = { onContactSeller(ad.sellerEmail) },
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = onContactSeller,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isContactingSeller && ad.sellerId != com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
                     ) {
+                        if (isContactingSeller) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                                color = LocalContentColor.current,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                        }
                         Text("Contact Seller")
                     }
                 }

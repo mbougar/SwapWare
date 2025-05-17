@@ -1,6 +1,8 @@
 package com.mbougar.swapware.data.repository
 
+import android.util.Log
 import com.google.firebase.Timestamp
+import com.mbougar.swapware.data.model.Ad
 import com.mbougar.swapware.data.model.Conversation
 import com.mbougar.swapware.data.model.Message
 import com.mbougar.swapware.data.remote.FirebaseAuthSource
@@ -29,7 +31,8 @@ class MessageRepositoryImpl @Inject constructor(
                 emit(Result.success(conversations))
             }
     }.catch { e ->
-        emit(Result.failure(Exception("Failed to load conversations", e)))
+        Log.e("MessageRepo", "Error in conversations stream", e)
+        emit(Result.failure(Exception("Failed to process conversation update: ${e.message}", e)))
     }.flowOn(Dispatchers.IO)
 
     override fun getMessagesStream(conversationId: String): Flow<Result<List<Message>>> = flow {
@@ -67,15 +70,51 @@ class MessageRepositoryImpl @Inject constructor(
             timestamp = timestamp
         )
 
-        // TODO eliminar el print
-        if (updateResult.isFailure) {
-            println("Warning: Failed to update conversation summary for $conversationId: ${updateResult.exceptionOrNull()?.message}")
-        }
-
         return@withContext Result.success(Unit)
     }
 
     override suspend fun getConversationDetails(conversationId: String): Result<Conversation> = withContext(Dispatchers.IO) {
         firestoreSource.getConversationDetails(conversationId)
+    }
+
+    override suspend fun findOrCreateConversationForAd(ad: Ad): Result<String> = withContext(Dispatchers.IO) {
+        val currentUser = authSource.getCurrentUser()
+        if (currentUser == null) {
+            return@withContext Result.failure(Exception("User not logged in"))
+        }
+
+        val currentUserId = currentUser.uid
+        val sellerId = ad.sellerId
+
+        if (currentUserId == sellerId) {
+            return@withContext Result.failure(Exception("Cannot start conversation with yourself"))
+        }
+
+        val findResult = firestoreSource.findConversation(ad.id, currentUserId, sellerId)
+
+        if (findResult.isSuccess) {
+            val existingConversation = findResult.getOrNull()
+            if (existingConversation != null) {
+                return@withContext Result.success(existingConversation.id)
+            } else {
+                val newConversation = Conversation(
+                    adId = ad.id,
+                    adTitle = ad.title,
+                    participantIds = listOf(currentUserId, sellerId).sorted(),
+                    participantEmails = if (currentUserId < sellerId) {
+                        listOf(currentUser.email ?: "N/A", ad.sellerEmail)
+                    } else {
+                        listOf(ad.sellerEmail, currentUser.email ?: "N/A")
+                    },
+                    lastMessageSnippet = null,
+                    lastMessageTimestamp = java.util.Date()
+                )
+                val createResult = firestoreSource.createConversation(newConversation)
+
+                return@withContext createResult
+            }
+        } else {
+            return@withContext Result.failure(findResult.exceptionOrNull() ?: Exception("Failed to search for conversations"))
+        }
     }
 }

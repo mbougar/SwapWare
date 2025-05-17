@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mbougar.swapware.data.model.Message
 import com.mbougar.swapware.viewmodel.ChatDetailViewModel
+import com.mbougar.swapware.viewmodel.ChatListItem
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -53,10 +54,10 @@ fun ChatDetailScreen(
         }
     }
 
-    LaunchedEffect(uiState.messages.size) {
-        if (uiState.messages.isNotEmpty()) {
+    LaunchedEffect(uiState.chatListItems.size) {
+        if (uiState.chatListItems.isNotEmpty()) {
             coroutineScope.launch {
-                listState.animateScrollToItem(uiState.messages.lastIndex)
+                listState.animateScrollToItem(uiState.chatListItems.lastIndex)
             }
         }
     }
@@ -91,7 +92,7 @@ fun ChatDetailScreen(
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 } else {
                     MessageList(
-                        messages = uiState.messages,
+                        chatItems = uiState.chatListItems,
                         currentUserId = uiState.currentUserId ?: "",
                         listState = listState
                     )
@@ -114,7 +115,7 @@ fun ChatDetailScreen(
 
 @Composable
 fun MessageList(
-    messages: List<Message>,
+    chatItems: List<ChatListItem>,
     currentUserId: String,
     listState: LazyListState
 ) {
@@ -122,19 +123,58 @@ fun MessageList(
         state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(messages, key = { it.id }) { message ->
-            MessageBubble(
-                message = message,
-                isCurrentUser = message.senderId == currentUserId
+        items(chatItems, key = { item ->
+            when (item) {
+                is ChatListItem.MessageItem -> "msg_${item.message.id}"
+                is ChatListItem.DateSeparatorItem -> "date_${item.date}"
+            }
+        }) { chatItem ->
+            when (chatItem) {
+                is ChatListItem.MessageItem -> {
+                    MessageBubble(
+                        message = chatItem.message,
+                        isCurrentUser = chatItem.message.senderId == currentUserId,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+                is ChatListItem.DateSeparatorItem -> {
+                    DateSeparator(date = chatItem.date)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DateSeparator(date: String) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+            tonalElevation = 1.dp
+        ) {
+            Text(
+                text = date,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             )
         }
     }
 }
 
 @Composable
-fun MessageBubble(message: Message, isCurrentUser: Boolean) {
+fun MessageBubble(
+    message: Message,
+    isCurrentUser: Boolean,
+    modifier: Modifier = Modifier
+) {
     val alignment = if (isCurrentUser) Alignment.CenterEnd else Alignment.CenterStart
     val backgroundColor = if (isCurrentUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
     val textColor = if (isCurrentUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
@@ -146,7 +186,7 @@ fun MessageBubble(message: Message, isCurrentUser: Boolean) {
     )
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
             .padding(

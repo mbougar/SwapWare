@@ -18,43 +18,67 @@ import com.mbougar.swapware.viewmodel.AuthViewModel
 import com.mbougar.swapware.viewmodel.AuthState
 
 @Composable
-fun LoginScreen(
+fun RegisterScreen(
     viewModel: AuthViewModel = hiltViewModel(),
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val authState by viewModel.authState.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+
 
     LaunchedEffect(authState.isLoginSuccess) {
         if (authState.isLoginSuccess) {
-            onLoginSuccess()
+            onRegisterSuccess()
             viewModel.consumeLoginSuccess()
         }
     }
 
-    LoginScreenContent(
+    RegisterScreenContent(
         authState = authState,
         email = email,
         password = password,
+        confirmPassword = confirmPassword,
         onEmailChange = { email = it },
-        onPasswordChange = { password = it },
-        onLoginClick = { viewModel.login(email, password) },
-        onNavigateToRegister = onNavigateToRegister
+        onPasswordChange = {
+            password = it
+            passwordError = null
+        },
+        onConfirmPasswordChange = {
+            confirmPassword = it
+            passwordError = null
+        },
+        onSignupClick = {
+            if (password != confirmPassword) {
+                passwordError = "Passwords do not match."
+            } else if (password.length < 6) {
+                passwordError = "Password should be at least 6 characters."
+            }
+            else {
+                viewModel.signup(email, password)
+            }
+        },
+        onNavigateToLogin = onNavigateToLogin,
+        passwordError = passwordError
     )
 }
 
 @Composable
-fun LoginScreenContent(
+fun RegisterScreenContent(
     authState: AuthState,
     email: String,
     password: String,
+    confirmPassword: String,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onLoginClick: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onConfirmPasswordChange: (String) -> Unit,
+    onSignupClick: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    passwordError: String?
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -64,7 +88,7 @@ fun LoginScreenContent(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("SwapWare Login", style = MaterialTheme.typography.headlineMedium)
+            Text("Create Account", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(40.dp))
 
             OutlinedTextField(
@@ -86,11 +110,30 @@ fun LoginScreenContent(
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
-                isError = authState.error != null && authState.error.contains("password", ignoreCase = true)
+                isError = passwordError != null || (authState.error != null && authState.error.contains("password", ignoreCase = true))
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = onConfirmPasswordChange,
+                label = { Text("Confirm Password") },
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                isError = passwordError != null
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (authState.error != null) {
+            if (passwordError != null) {
+                Text(
+                    text = passwordError,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            } else if (authState.error != null) {
                 Text(
                     text = authState.error,
                     color = MaterialTheme.colorScheme.error,
@@ -105,11 +148,11 @@ fun LoginScreenContent(
                 CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
             } else {
                 Button(
-                    onClick = onLoginClick,
-                    enabled = !authState.isLoading && email.isNotBlank() && password.isNotBlank(),
+                    onClick = onSignupClick,
+                    enabled = !authState.isLoading && email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Login")
+                    Text("Sign Up")
                 }
             }
 
@@ -120,17 +163,16 @@ fun LoginScreenContent(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Don't have an account? ")
+                Text("Already have an account? ")
                 ClickableText(
-                    text = AnnotatedString("Sign Up"),
-                    onClick = { onNavigateToRegister() },
+                    text = AnnotatedString("Login"),
+                    onClick = { onNavigateToLogin() },
                     style = TextStyle(
                         color = MaterialTheme.colorScheme.primary,
                         textDecoration = TextDecoration.Underline
                     )
                 )
             }
-            // TODO agregar olvidado contraseña
         }
     }
 }

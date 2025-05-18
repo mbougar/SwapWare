@@ -21,7 +21,7 @@ import com.mbougar.swapware.ui.screens.messages.ChatDetailScreen
 import com.mbougar.swapware.ui.screens.messages.MessagesScreen
 import com.mbougar.swapware.ui.screens.profile.ProfileScreen
 import java.net.URLDecoder
-
+import com.mbougar.swapware.ui.screens.auth.RegisterScreen
 
 @Composable
 fun AppNavHost(
@@ -39,8 +39,26 @@ fun AppNavHost(
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
+                        popUpTo(Screen.Register.route) { inclusive = true }
                         launchSingleTop = true
                     }
+                },
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                }
+            )
+        }
+        composable(Screen.Register.route) { // New Route
+            RegisterScreen(
+                onRegisterSuccess = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToLogin = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -87,12 +105,10 @@ fun AppNavHost(
             val encodedEmail = backStackEntry.arguments?.getString("otherUserEmail")
             val encodedTitle = backStackEntry.arguments?.getString("adTitle")
 
-            //TODO cambiar errores
             requireNotNull(conversationId) { "Conversation ID is required" }
             requireNotNull(encodedEmail) { "Other user email is required" }
             requireNotNull(encodedTitle) { "Ad title is required" }
 
-            // Decode the parameters
             val otherUserEmail = remember(encodedEmail) { URLDecoder.decode(encodedEmail, "UTF-8") }
             val adTitle = remember(encodedTitle) { URLDecoder.decode(encodedTitle, "UTF-8") }
 
@@ -103,6 +119,5 @@ fun AppNavHost(
                 navController = navController
             )
         }
-        // TODO añadir settings?
     }
 }

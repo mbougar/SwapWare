@@ -4,11 +4,13 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,13 +36,12 @@ fun AddAdScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<HardwareCategory?>(null) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -65,7 +66,7 @@ fun AddAdScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Add New Ad") }) },
+        topBar = { TopAppBar(title = { Text("Create New Ad") }) },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
@@ -74,72 +75,109 @@ fun AddAdScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title") },
+                label = { Text("Ad Title") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium
             )
-            Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth().height(120.dp),
-                maxLines = 5
+                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 120.dp),
+                maxLines = 6,
+                shape = MaterialTheme.shapes.medium
             )
-            Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = price,
-                onValueChange = { price = it },
-                label = { Text("Price (€)") },
+                onValueChange = { price = it.filter { char -> char.isDigit() || char == '.' } },
+                label = { Text("Price") },
+                leadingIcon = { Text("€", style = MaterialTheme.typography.bodyLarge) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine = true
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium
             )
-            Spacer(Modifier.height(8.dp))
-            CategoryDropdown(category) { category = it }
-            Spacer(Modifier.height(16.dp))
 
-            Box(
+            ModernCategoryDropdown(
+                selectedCategory = selectedCategory,
+                onCategorySelected = { selectedCategory = it },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text("Ad Image (Optional)", style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .border(1.dp, MaterialTheme.colorScheme.outline)
+                    .height(220.dp)
+                    .clickable { imagePickerLauncher.launch("image/*") },
+                shape = MaterialTheme.shapes.large,
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                if (imageUri != null) {
-                    Image(
-                        painter = rememberAsyncImagePainter(
-                            ImageRequest.Builder(LocalContext.current).data(data = imageUri).build()
-                        ),
-                        contentDescription = "Selected Ad Image",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Text("No image selected", Modifier.align(Alignment.Center))
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (imageUri != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                ImageRequest.Builder(LocalContext.current).data(data = imageUri).crossfade(true).build()
+                            ),
+                            contentDescription = "Selected Ad Image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.AddPhotoAlternate,
+                                contentDescription = "Add Image Placeholder",
+                                modifier = Modifier.size(60.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text("Tap to select an image", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
-            Button(onClick = { imagePickerLauncher.launch("image/*") }) {
-                Text("Select Image")
-            }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.weight(1f))
 
             Button(
                 onClick = {
-                    viewModel.addAd(title, description, price, category, imageUri)
+                    viewModel.addAd(
+                        title = title,
+                        description = description,
+                        priceStr = price,
+                        category = selectedCategory?.displayName ?: "",
+                        imageUri = imageUri
+                    )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                enabled = !uiState.isLoading && title.isNotBlank() && description.isNotBlank() && price.isNotBlank() && selectedCategory != null,
+                shape = MaterialTheme.shapes.medium
             ) {
                 if (uiState.isLoading) {
-                    CircularProgressIndicator(Modifier.size(24.dp))
+                    CircularProgressIndicator(
+                        Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
                 } else {
-                    Text("Post Ad")
+                    Text("Post Ad", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -148,41 +186,44 @@ fun AddAdScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryDropdown(
-    category: String,
-    onCategoryChange: (String) -> Unit
+fun ModernCategoryDropdown(
+    selectedCategory: HardwareCategory?,
+    onCategorySelected: (HardwareCategory) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = it }
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
     ) {
         OutlinedTextField(
-            value = category,
+            value = selectedCategory?.displayName ?: "Select Category",
             onValueChange = {},
             label = { Text("Category") },
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(),
-            singleLine = true,
             readOnly = true,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            }
+            },
+            shape = MaterialTheme.shapes.medium,
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
         )
-
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            HardwareCategory.entries.forEach { item ->
+            HardwareCategory.entries.forEach { category ->
                 DropdownMenuItem(
-                    text = { Text(item.displayName) },
+                    text = { Text(category.displayName) },
                     onClick = {
-                        onCategoryChange(item.displayName)
+                        onCategorySelected(category)
                         expanded = false
-                    }
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
         }

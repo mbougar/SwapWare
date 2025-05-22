@@ -1,6 +1,12 @@
 package com.mbougar.swapware.ui.screens.addad
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.location.Geocoder
+import androidx.compose.material.icons.filled.MyLocation
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -17,17 +23,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.mbougar.swapware.data.model.HardwareCategory
+import com.mbougar.swapware.viewmodel.AddAdScreenEvent
 import com.mbougar.swapware.viewmodel.AddAdViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun AddAdScreen(
     navController: NavController,
@@ -42,6 +59,11 @@ fun AddAdScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val locationPermissionState = rememberPermissionState(
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -49,19 +71,58 @@ fun AddAdScreen(
         imageUri = uri
     }
 
-    LaunchedEffect(uiState) {
-        if (uiState.isSuccess) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Ad posted successfully!")
+    var citySuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
+    var allSpanishCities by remember { mutableStateOf<List<String>>(emptyList()) }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        allSpanishCities = loadCitiesFromAssets(context, "municipios.txt")
+    }
+
+    LaunchedEffect(uiState.sellerLocation, allSpanishCities) {
+        val currentText = uiState.sellerLocation
+        if (currentText.length > 1 && allSpanishCities.isNotEmpty()) {
+            citySuggestions = allSpanishCities.filter {
+                it.contains(currentText, ignoreCase = true)
+            }.take(10)
+            dropdownExpanded = citySuggestions.isNotEmpty() && currentText.isNotEmpty()
+        } else {
+            citySuggestions = emptyList()
+            dropdownExpanded = false
+        }
+    }
+
+    LaunchedEffect(key1 = true) {
+        viewModel.eventFlow.collectLatest { event ->
+            when (event) {
+                is AddAdScreenEvent.ShowSnackbar -> {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = event.message,
+                            duration = if (event.durationLong) SnackbarDuration.Long else SnackbarDuration.Short
+                        )
+                    }
+                }
+                is AddAdScreenEvent.RequestLocationPermission -> {
+                    locationPermissionState.launchPermissionRequest()
+                }
             }
+        }
+    }
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            scope.launch { snackbarHostState.showSnackbar("Ad posted successfully!") }
             navController.popBackStack()
+            viewModel.consumeSuccess()
             viewModel.resetState()
         }
-        uiState.error?.let { error ->
-            scope.launch {
-                snackbarHostState.showSnackbar("Error: $error")
-            }
-            viewModel.resetState()
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { errorMsg ->
+            scope.launch { snackbarHostState.showSnackbar("Error: $errorMsg") }
+            viewModel.consumeError()
         }
     }
 
@@ -113,6 +174,63 @@ fun AddAdScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            ExposedDropdownMenuBox(
+                expanded = dropdownExpanded && citySuggestions.isNotEmpty(),
+                onExpandedChange = {  },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = uiState.sellerLocation,
+                    onValueChange = { viewModel.onSellerLocationChange(it) },
+                    label = { Text("Your City/Region (e.g., Jerez)") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                    shape = MaterialTheme.shapes.medium,
+                    trailingIcon = {
+                        if (uiState.isFetchingLocation) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        } else {
+                            IconButton(onClick = {
+                                if (locationPermissionState.status.isGranted) {
+                                    viewModel.requestCurrentLocation()
+                                } else {
+                                    locationPermissionState.launchPermissionRequest()
+                                }
+                            }) {
+                                Icon(Icons.Filled.MyLocation, "Get current city/region")
+                            }
+                        }
+                    }
+                )
+
+                if (citySuggestions.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false }
+                    ) {
+                        citySuggestions.forEach { suggestion ->
+                            DropdownMenuItem(
+                                text = { Text(suggestion) },
+                                onClick = {
+                                    viewModel.onSellerLocationChange(suggestion)
+                                    dropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            if (!locationPermissionState.status.isGranted && !uiState.isFetchingLocation) {
+                Text(
+                    "Tap the icon to try auto-detecting your city (needs location permission), or enter manually.",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(start = 4.dp, top = 2.dp, end = 4.dp)
+                )
+            }
+
             Text("Ad Image (Optional)", style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
             Card(
                 modifier = Modifier
@@ -163,11 +281,11 @@ fun AddAdScreen(
                         description = description,
                         priceStr = price,
                         category = selectedCategory?.displayName ?: "",
-                        imageUri = imageUri
+                        imageUri = imageUri,
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                enabled = !uiState.isLoading && title.isNotBlank() && description.isNotBlank() && price.isNotBlank() && selectedCategory != null,
+                enabled = !uiState.isLoading && title.isNotBlank() && description.isNotBlank() && price.isNotBlank() && selectedCategory != null && uiState.sellerLocation.isNotBlank(),
                 shape = MaterialTheme.shapes.medium
             ) {
                 if (uiState.isLoading) {
@@ -181,6 +299,17 @@ fun AddAdScreen(
                 }
             }
         }
+    }
+}
+
+fun loadCitiesFromAssets(context: Context, fileName: String): List<String> {
+    return try {
+        context.assets.open(fileName).bufferedReader().useLines { lines ->
+            lines.map { it.trim() }.filter { it.isNotEmpty() }.toList()
+        }
+    } catch (e: Exception) {
+        Log.e("CityLoader", "Error loading cities from $fileName", e)
+        emptyList()
     }
 }
 

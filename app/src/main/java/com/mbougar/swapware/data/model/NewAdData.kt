@@ -7,5 +7,6 @@ data class NewAdData(
     val description: String,
     val price: Double,
     val category: String,
-    val imageUri: Uri?
+    val imageUri: Uri?,
+    val sellerLocation: String?
 )

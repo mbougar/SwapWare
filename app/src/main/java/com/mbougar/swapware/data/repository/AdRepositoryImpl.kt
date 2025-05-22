@@ -48,13 +48,17 @@ class AdRepositoryImpl @Inject constructor(
                 sellerId = currentUser.uid,
                 sellerEmail = currentUser.email ?: "N/A",
                 imageUrl = imageUrl,
-                timestamp = System.currentTimeMillis()
+                timestamp = System.currentTimeMillis(),
+                sellerLocation = adData.sellerLocation
             )
 
             val firestoreResult = firestoreSource.saveAd(ad)
 
             if (firestoreResult.isSuccess) {
-                adDao.insertAd(ad) // Asegurarme de que la id se ha actualizado tambien de forma local (no tengo claro si lo hace o no)
+                val adToSaveInRoom = ad.copy(id = (ad.id.ifEmpty { firestoreResult.getOrNull() ?: "" }).toString())
+                if(adToSaveInRoom.id.isNotEmpty()) {
+                    adDao.insertAd(adToSaveInRoom)
+                }
             }
             firestoreResult
         } catch (e: Exception) {

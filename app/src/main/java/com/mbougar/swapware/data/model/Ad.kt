@@ -17,5 +17,6 @@ data class Ad(
     val sellerEmail: String = "",
     val imageUrl: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
-    var isFavorite: Boolean = false // Local state
+    var isFavorite: Boolean = false, // Local state
+    val sellerLocation: String? = null,
 )

@@ -20,14 +20,14 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
         fun createRoute(adId: String) = "ad_detail/$adId"
     }
     object ChatDetail : Screen(
-        route = "chat_detail/{conversationId}/{otherUserEmail}/{adTitle}",
+        route = "chat_detail/{conversationId}/{otherUserDisplayName}/{adTitle}",
         title = "Chat",
         icon =  Icons.AutoMirrored.Filled.Chat
     ) {
-        fun createRoute(conversationId: String, otherUserEmail: String, adTitle: String): String {
-            val encodedEmail = URLEncoder.encode(otherUserEmail, "UTF-8")
+        fun createRoute(conversationId: String, otherUserDisplayName: String, adTitle: String): String {
+            val encodedDisplayName = URLEncoder.encode(otherUserDisplayName, "UTF-8")
             val encodedTitle = URLEncoder.encode(adTitle, "UTF-8")
-            return "chat_detail/$conversationId/$encodedEmail/$encodedTitle"
+            return "chat_detail/$conversationId/$encodedDisplayName/$encodedTitle"
         }
     }
 }

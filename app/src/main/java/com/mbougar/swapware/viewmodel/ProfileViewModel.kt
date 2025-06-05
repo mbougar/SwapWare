@@ -12,8 +12,10 @@ import javax.inject.Inject
 
 data class ProfileUiState(
     val userEmail: String? = null,
+    val userDisplayName: String? = null,
     val isLoading: Boolean = false
 )
+
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -30,7 +32,10 @@ class ProfileViewModel @Inject constructor(
     private fun loadUserProfile() {
         viewModelScope.launch {
             val user = authRepository.getCurrentUser()
-            _uiState.value = ProfileUiState(userEmail = user?.email)
+            _uiState.value = ProfileUiState(
+                userEmail = user?.email,
+                userDisplayName = user?.displayName
+            )
         }
     }
 

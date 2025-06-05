@@ -15,6 +15,7 @@ data class Ad(
     val category: String = "",
     val sellerId: String = "",
     val sellerEmail: String = "",
+    val sellerDisplayName: String = "",
     val imageUrl: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
     var isFavorite: Boolean = false, // Local state

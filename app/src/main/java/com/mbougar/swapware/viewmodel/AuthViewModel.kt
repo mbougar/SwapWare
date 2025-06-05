@@ -49,15 +49,15 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun signup(email: String, pass: String) {
-        if (email.isBlank() || pass.isBlank()) {
-            _authState.value = _authState.value.copy(error = "Email and password cannot be empty.")
+    fun signup(email: String, pass: String, displayName: String) {
+        if (email.isBlank() || pass.isBlank() || displayName.isBlank()) {
+            _authState.value = _authState.value.copy(error = "All fields must be filled.")
             return
         }
         // TODO agregar validacion (formato email, longitud contraseña)
         viewModelScope.launch {
             _authState.value = _authState.value.copy(isLoading = true, error = null, isLoginSuccess = false)
-            val result = authRepository.signup(email.trim(), pass.trim())
+            val result = authRepository.signup(email.trim(), pass.trim(), displayName.trim())
             _authState.value = _authState.value.copy(
                 isLoading = false,
                 currentUser = result.getOrNull(),

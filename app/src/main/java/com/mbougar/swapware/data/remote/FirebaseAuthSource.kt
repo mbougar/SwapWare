@@ -23,10 +23,19 @@ class FirebaseAuthSource @Inject constructor(
         }
     }
 
-    suspend fun signup(email: String, pass: String): Result<FirebaseUser> {
+    suspend fun signup(email: String, pass: String, displayName: String): Result<FirebaseUser> {
         return try {
             val authResult = firebaseAuth.createUserWithEmailAndPassword(email, pass).await()
-            Result.success(authResult.user!!)
+            val user = authResult.user
+            if (user != null) {
+                val profileUpdates = com.google.firebase.auth.userProfileChangeRequest {
+                    this.displayName = displayName
+                }
+                user.updateProfile(profileUpdates).await()
+                Result.success(user)
+            } else {
+                Result.failure(Exception("User creation failed, user is null."))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -28,6 +28,7 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var displayName by remember { mutableStateOf("") }
     var passwordError by remember { mutableStateOf<String?>(null) }
 
 
@@ -39,6 +40,8 @@ fun RegisterScreen(
     }
 
     RegisterScreenContent(
+        displayName = displayName,
+        onDisplayNameChange = { displayName = it },
         authState = authState,
         email = email,
         password = password,
@@ -57,9 +60,10 @@ fun RegisterScreen(
                 passwordError = "Passwords do not match."
             } else if (password.length < 6) {
                 passwordError = "Password should be at least 6 characters."
-            }
-            else {
-                viewModel.signup(email, password)
+            } else if (displayName.isBlank()){
+                passwordError = "Display name cannot be empty."
+            } else {
+                viewModel.signup(email, password, displayName)
             }
         },
         onNavigateToLogin = onNavigateToLogin,
@@ -69,6 +73,8 @@ fun RegisterScreen(
 
 @Composable
 fun RegisterScreenContent(
+    displayName: String,
+    onDisplayNameChange: (String) -> Unit,
     authState: AuthState,
     email: String,
     password: String,
@@ -90,6 +96,15 @@ fun RegisterScreenContent(
         ) {
             Text("Create Account", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(40.dp))
+
+            OutlinedTextField(
+                value = displayName,
+                onValueChange = onDisplayNameChange,
+                label = { Text("Display Name") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = email,

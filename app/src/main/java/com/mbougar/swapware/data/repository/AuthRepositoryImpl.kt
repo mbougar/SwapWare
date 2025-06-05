@@ -11,6 +11,6 @@ class AuthRepositoryImpl @Inject constructor(
     override fun getCurrentUser() = firebaseAuthSource.getCurrentUser()
     override fun isUserLoggedIn() = firebaseAuthSource.isUserLoggedIn()
     override suspend fun login(email: String, pass: String) = firebaseAuthSource.login(email, pass)
-    override suspend fun signup(email: String, pass: String) = firebaseAuthSource.signup(email, pass)
+    override suspend fun signup(email: String, pass: String, displayName: String) = firebaseAuthSource.signup(email, pass, displayName)
     override fun logout() = firebaseAuthSource.logout()
 }

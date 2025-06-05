@@ -55,6 +55,7 @@ class MessageRepositoryImpl @Inject constructor(
             conversationId = conversationId,
             senderId = currentUser.uid,
             senderEmail = currentUser.email ?: "N/A",
+            senderDisplayName = currentUser.displayName ?: "Anonymous",
             text = text.trim(),
         )
 
@@ -97,14 +98,22 @@ class MessageRepositoryImpl @Inject constructor(
             if (existingConversation != null) {
                 return@withContext Result.success(existingConversation.id)
             } else {
+                val currentUserDisplayName = currentUser.displayName ?: "Anonymous"
+                val sellerDisplayName = ad.sellerDisplayName
+
                 val newConversation = Conversation(
                     adId = ad.id,
                     adTitle = ad.title,
-                    participantIds = listOf(currentUserId, sellerId).sorted(),
-                    participantEmails = if (currentUserId < sellerId) {
+                    participantIds = listOf(currentUser.uid, ad.sellerId).sorted(),
+                    participantEmails = if (currentUser.uid < ad.sellerId) {
                         listOf(currentUser.email ?: "N/A", ad.sellerEmail)
                     } else {
                         listOf(ad.sellerEmail, currentUser.email ?: "N/A")
+                    },
+                    participantDisplayNames = if (currentUser.uid < ad.sellerId) {
+                        listOf(currentUserDisplayName, sellerDisplayName)
+                    } else {
+                        listOf(sellerDisplayName, currentUserDisplayName)
                     },
                     lastMessageSnippet = null,
                     lastMessageTimestamp = java.util.Date()

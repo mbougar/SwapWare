@@ -78,10 +78,10 @@ fun MessagesContent(
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     items(uiState.conversations, key = { it.id }) { conversation ->
-                        val otherParticipantEmail = remember(conversation.participantIds, uiState.currentUserId) {
+                        val otherParticipantDisplayName = remember(conversation.participantIds, conversation.participantDisplayNames, uiState.currentUserId) {
                             val otherIdIndex = conversation.participantIds.indexOfFirst { id -> id != uiState.currentUserId }
-                            if (otherIdIndex != -1 && otherIdIndex < conversation.participantEmails.size) {
-                                conversation.participantEmails[otherIdIndex]
+                            if (otherIdIndex != -1 && otherIdIndex < conversation.participantDisplayNames.size) {
+                                conversation.participantDisplayNames[otherIdIndex]
                             } else {
                                 "Unknown User"
                             }
@@ -89,12 +89,12 @@ fun MessagesContent(
 
                         ConversationItem(
                             conversation = conversation,
-                            currentUserId = uiState.currentUserId ?: "",
+                            otherParticipantDisplayName = otherParticipantDisplayName,
                             onClick = {
                                 navController.navigate(
                                     Screen.ChatDetail.createRoute(
                                         conversationId = conversation.id,
-                                        otherUserEmail = otherParticipantEmail,
+                                        otherUserDisplayName = otherParticipantDisplayName,
                                         adTitle = conversation.adTitle
                                     )
                                 )
@@ -114,18 +114,9 @@ fun MessagesContent(
 @Composable
 fun ConversationItem(
     conversation: Conversation,
-    currentUserId: String,
+    otherParticipantDisplayName: String,
     onClick: () -> Unit
 ) {
-    val otherParticipantEmail = remember(conversation.participantIds, currentUserId) {
-        val otherIdIndex = conversation.participantIds.indexOfFirst { it != currentUserId }
-        if (otherIdIndex != -1 && otherIdIndex < conversation.participantEmails.size) {
-            conversation.participantEmails[otherIdIndex]
-        } else {
-            "Unknown User"
-        }
-    }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -141,7 +132,7 @@ fun ConversationItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = otherParticipantEmail,
+                    text = otherParticipantDisplayName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,

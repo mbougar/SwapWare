@@ -10,6 +10,7 @@ data class Message(
     val conversationId: String = "",
     val senderId: String = "",
     val senderEmail: String = "",
+    val senderDisplayName: String = "",
     val receiverId: String = "",
     val text: String = "",
     @ServerTimestamp

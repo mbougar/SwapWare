@@ -36,7 +36,7 @@ import java.util.Locale
 @Composable
 fun ChatDetailScreen(
     conversationId: String,
-    otherUserEmail: String,
+    otherUserDisplayName: String,
     adTitle: String,
     navController: NavController,
     viewModel: ChatDetailViewModel = hiltViewModel()
@@ -67,7 +67,7 @@ fun ChatDetailScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(otherUserEmail, style = MaterialTheme.typography.titleMedium)
+                        Text(otherUserDisplayName, style = MaterialTheme.typography.titleMedium)
                         Text(adTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },

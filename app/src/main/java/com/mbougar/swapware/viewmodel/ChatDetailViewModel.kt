@@ -22,7 +22,7 @@ data class ChatDetailUiState(
     val isSending: Boolean = false,
     val error: String? = null,
     val currentUserId: String? = null,
-    val otherUserEmail: String = "",
+    val otherUserDisplayName: String = "",
     val adTitle: String = ""
 )
 
@@ -79,14 +79,14 @@ class ChatDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val conversationId: String = checkNotNull(savedStateHandle["conversationId"])
-    private val otherUserEmail: String = checkNotNull(savedStateHandle["otherUserEmail"])
+    private val otherUserDisplayName: String = checkNotNull(savedStateHandle["otherUserDisplayName"])
     private val adTitle: String = checkNotNull(savedStateHandle["adTitle"])
 
 
     private val _uiState = MutableStateFlow(
         ChatDetailUiState(
             currentUserId = authRepository.getCurrentUser()?.uid,
-            otherUserEmail = java.net.URLDecoder.decode(otherUserEmail, "UTF-8"),
+            otherUserDisplayName = java.net.URLDecoder.decode(otherUserDisplayName, "UTF-8"),
             adTitle = java.net.URLDecoder.decode(adTitle, "UTF-8")
         )
     )

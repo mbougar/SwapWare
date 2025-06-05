@@ -40,17 +40,14 @@ fun AdDetailScreen(
         uiState.navigateToConversationId?.let { conversationId ->
             val ad = uiState.ad
             if (ad != null) {
-                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                val otherUserEmail = if (ad.sellerId == currentUser?.uid) {
-                    "Error"
-                } else {
-                    ad.sellerEmail
+                val otherUserDisplayName = ad.sellerDisplayName.ifEmpty {
+                    ad.sellerEmail.takeIf { it.isNotEmpty() } ?: "Unknown Seller"
                 }
 
                 navController.navigate(
                     Screen.ChatDetail.createRoute(
                         conversationId = conversationId,
-                        otherUserEmail = otherUserEmail,
+                        otherUserDisplayName = otherUserDisplayName,
                         adTitle = ad.title
                     )
                 )
@@ -163,7 +160,7 @@ fun AdDetailContent(
                     Text("Description", style = MaterialTheme.typography.titleMedium)
                     Text(ad.description, style = MaterialTheme.typography.bodyLarge)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Seller: ${ad.sellerEmail}", style = MaterialTheme.typography.bodyMedium)
+                    Text("Seller: ${ad.sellerDisplayName.ifEmpty { ad.sellerEmail }}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(16.dp))
                     ad.sellerLocation?.let { location ->
                         Row(verticalAlignment = Alignment.CenterVertically) {

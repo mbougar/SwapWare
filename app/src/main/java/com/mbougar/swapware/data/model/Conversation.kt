@@ -11,6 +11,7 @@ data class Conversation(
     val adTitle: String = "",
     val participantIds: List<String> = emptyList(),
     val participantEmails: List<String> = emptyList(),
+    val participantDisplayNames: List<String> = emptyList(),
     val lastMessageSnippet: String? = null,
     @ServerTimestamp
     val lastMessageTimestamp: Date? = null,

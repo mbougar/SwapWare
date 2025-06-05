@@ -97,24 +97,24 @@ fun AppNavHost(
             route = Screen.ChatDetail.route,
             arguments = listOf(
                 navArgument("conversationId") { type = NavType.StringType },
-                navArgument("otherUserEmail") { type = NavType.StringType },
+                navArgument("otherUserDisplayName") { type = NavType.StringType },
                 navArgument("adTitle") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val conversationId = backStackEntry.arguments?.getString("conversationId")
-            val encodedEmail = backStackEntry.arguments?.getString("otherUserEmail")
+            val encodedDisplayName = backStackEntry.arguments?.getString("otherUserDisplayName")
             val encodedTitle = backStackEntry.arguments?.getString("adTitle")
 
             requireNotNull(conversationId) { "Conversation ID is required" }
-            requireNotNull(encodedEmail) { "Other user email is required" }
+            requireNotNull(encodedDisplayName) { "Other user display name is required" }
             requireNotNull(encodedTitle) { "Ad title is required" }
 
-            val otherUserEmail = remember(encodedEmail) { URLDecoder.decode(encodedEmail, "UTF-8") }
+            val otherUserDisplayName = remember(encodedDisplayName) { URLDecoder.decode(encodedDisplayName, "UTF-8") }
             val adTitle = remember(encodedTitle) { URLDecoder.decode(encodedTitle, "UTF-8") }
 
             ChatDetailScreen(
                 conversationId = conversationId,
-                otherUserEmail = otherUserEmail,
+                otherUserDisplayName = otherUserDisplayName,
                 adTitle = adTitle,
                 navController = navController
             )

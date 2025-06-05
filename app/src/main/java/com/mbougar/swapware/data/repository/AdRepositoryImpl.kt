@@ -40,13 +40,14 @@ class AdRepositoryImpl @Inject constructor(
             }
 
             val ad = Ad(
-                // id vacio para que firebase lo genere
+                // empty id so firebase will generate it
                 title = adData.title,
                 description = adData.description,
                 price = adData.price,
                 category = adData.category,
                 sellerId = currentUser.uid,
                 sellerEmail = currentUser.email ?: "N/A",
+                sellerDisplayName = currentUser.displayName ?: "Anonymous",
                 imageUrl = imageUrl,
                 timestamp = System.currentTimeMillis(),
                 sellerLocation = adData.sellerLocation

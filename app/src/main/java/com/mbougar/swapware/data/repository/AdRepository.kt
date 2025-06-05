@@ -13,4 +13,5 @@ interface AdRepository {
     suspend fun toggleFavorite(adId: String, isFavorite: Boolean)
     suspend fun refreshAds(): Result<Unit>
     suspend fun getAdById(adId: String): Ad?
+    fun getAdsByUserId(userId: String): Flow<Result<List<Ad>>>
 }

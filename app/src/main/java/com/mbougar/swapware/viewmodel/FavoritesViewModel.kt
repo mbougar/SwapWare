@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mbougar.swapware.data.model.Ad
 import com.mbougar.swapware.data.repository.AdRepository
+import com.mbougar.swapware.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -11,19 +12,22 @@ import javax.inject.Inject
 
 data class FavoritesUiState(
     val favoriteAds: List<Ad> = emptyList(),
-    val isLoading: Boolean = true, // Initial loading state
+    val currentUserId: String? = null,
+    val isLoading: Boolean = true,
     val error: String? = null
 )
 
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
-    private val adRepository: AdRepository
+    private val adRepository: AdRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FavoritesUiState())
     val uiState: StateFlow<FavoritesUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.update { it.copy(currentUserId = authRepository.getCurrentUser()?.uid) }
         loadFavoriteAds()
     }
 

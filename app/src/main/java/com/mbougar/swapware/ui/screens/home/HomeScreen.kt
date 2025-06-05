@@ -3,8 +3,19 @@ package com.mbougar.swapware.ui.screens.home
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -12,13 +23,36 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.ImageNotSupported
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,11 +61,13 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.mbougar.swapware.R
+import com.mbougar.swapware.data.local.PoblacionLocation
 import com.mbougar.swapware.data.model.Ad
 import com.mbougar.swapware.data.model.HardwareCategory
 import com.mbougar.swapware.ui.navigation.Screen
 import com.mbougar.swapware.viewmodel.HomeUiState
 import com.mbougar.swapware.viewmodel.HomeViewModel
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,8 +83,16 @@ fun HomeScreen(
                 title = { Text("SwapWare") },
                 actions = {
                     FilterMenu(
-                        selectedCategory = uiState.selectedCategory,
-                        onCategorySelected = { viewModel.filterByCategory(it) }
+                        currentUiState = uiState,
+                        onCategorySelected = { viewModel.filterByCategory(it) },
+                        onLocationQueryChanged = { viewModel.onFilterLocationSearchQueryChanged(it) },
+                        onLocationSelected = { viewModel.setDistanceFilterLocation(it) },
+                        onDistanceSelected = { viewModel.setFilterDistanceKm(it) },
+                        onClearDistanceFilter = {
+                            viewModel.setDistanceFilterLocation(null)
+                            viewModel.setFilterDistanceKm(null)
+                            viewModel.onFilterLocationSearchQueryChanged("")
+                        }
                     )
                 }
             )
@@ -63,7 +107,7 @@ fun HomeScreen(
             onFavoriteClick = { adId ->
                 viewModel.toggleFavorite(adId)
             },
-            onRefresh = { viewModel.refresh() } // TODO hacer que se actualiza al arrastrar la pantalla desde la parte superior?
+            onRefresh = { viewModel.refresh() }
         )
     }
 }
@@ -76,6 +120,9 @@ fun HomeScreenContent(
     onFavoriteClick: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
+    val homeViewModel: HomeViewModel = hiltViewModel()
+    val currentUserIdForHome = homeViewModel.uiState.collectAsState().value.currentUserId
+
     Box(modifier = modifier.fillMaxSize()) {
         when {
             uiState.isLoading && uiState.ads.isEmpty() -> {
@@ -87,14 +134,11 @@ fun HomeScreenContent(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.align(Alignment.Center).padding(16.dp)
                 )
-                // TODO Quiza un  Button("Retry") { onRefresh() } ??
             }
             uiState.ads.isEmpty() -> {
                 Text("No ads found.", modifier = Modifier.align(Alignment.Center))
-                // TODO Quiza un  Button("Retry") { onRefresh() } ??
             }
             else -> {
-                // Si decido usar gesto de refresh seria aqui tambien
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -103,7 +147,8 @@ fun HomeScreenContent(
                         AdItem(
                             ad = ad,
                             onAdClick = { onAdClick(ad.id) },
-                            onFavoriteClick = { onFavoriteClick(ad.id) }
+                            onFavoriteClick = { onFavoriteClick(ad.id) },
+                            currentUserId = currentUserIdForHome
                         )
                     }
                 }
@@ -116,13 +161,15 @@ fun HomeScreenContent(
 }
 
 @SuppressLint("DefaultLocale")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdItem(
     ad: Ad,
     onAdClick: () -> Unit,
-    onFavoriteClick: () -> Unit
+    onFavoriteClick: () -> Unit,
+    currentUserId: String? = null
 ) {
+    val isOwnAd = ad.sellerId == currentUserId && currentUserId != null
+
     Card(
         onClick = onAdClick,
         modifier = Modifier.fillMaxWidth(),
@@ -191,50 +238,182 @@ fun AdItem(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
+                    ad.sellerLocation?.let {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
-                IconButton(onClick = onFavoriteClick) {
-                    Icon(
-                        imageVector = if (ad.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (ad.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                    )
+                if (!isOwnAd) {
+                    IconButton(
+                        onClick = onFavoriteClick,
+                    ) {
+                        Icon(
+                            imageVector = if (ad.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (ad.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                        )
+                    }
+                } else {
+                    // Optional: Add a placeholder or a small "Your Ad" chip if desired
+                    // For now, just don't show the favorite button
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterMenu(
-    selectedCategory: String?,
-    onCategorySelected: (String?) -> Unit
+    currentUiState: HomeUiState,
+    onCategorySelected: (String?) -> Unit,
+    onLocationQueryChanged: (String) -> Unit,
+    onLocationSelected: (PoblacionLocation) -> Unit,
+    onDistanceSelected: (Float?) -> Unit,
+    onClearDistanceFilter: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var mainFilterExpanded by remember { mutableStateOf(false) }
+    var categoryDropdownExpanded by remember { mutableStateOf(false) }
+
+    var locationSearchDropdownVisible by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    val distanceOptions = listOf(5f, 10f, 25f, 50f, 100f)
 
     Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.FilterAlt, contentDescription = "Filter")
+        IconButton(onClick = { mainFilterExpanded = true }) {
+            Icon(Icons.Default.FilterAlt, contentDescription = "Filter products")
         }
         DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
+            expanded = mainFilterExpanded,
+            onDismissRequest = { mainFilterExpanded = false },
+            modifier = Modifier.widthIn(min = 280.dp, max = 340.dp).fillMaxHeight()
         ) {
-            DropdownMenuItem(
-                text = { Text("All Categories") },
-                onClick = {
-                    onCategorySelected(null)
-                    expanded = false
-                }
+            Text(
+                "Filter Options",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
             )
-            HardwareCategory.entries.forEach { category ->
-                DropdownMenuItem(
-                    text = { Text(category.displayName) },
-                    onClick = {
-                        onCategorySelected(category.displayName)
-                        expanded = false
+
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                ExposedDropdownMenuBox(
+                    expanded = categoryDropdownExpanded,
+                    onExpandedChange = { categoryDropdownExpanded = !categoryDropdownExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = currentUiState.selectedCategory ?: "All Categories",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryDropdownExpanded) },
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    ExposedDropdownMenu(
+                        expanded = categoryDropdownExpanded,
+                        onDismissRequest = { categoryDropdownExpanded = false }
+                    ) {
+                        DropdownMenuItem(text = { Text("All Categories") }, onClick = { onCategorySelected(null); categoryDropdownExpanded = false })
+                        HardwareCategory.entries.forEach { category ->
+                            DropdownMenuItem(text = { Text(category.displayName) }, onClick = { onCategorySelected(category.displayName); categoryDropdownExpanded = false })
+                        }
                     }
-                )
+                }
             }
+
+            Divider(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp))
+
+            Text("Distance from", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                ExposedDropdownMenuBox(
+                    expanded = locationSearchDropdownVisible && currentUiState.locationSuggestions.isNotEmpty() && currentUiState.locationSearchQuery.isNotBlank(),
+                    onExpandedChange = {
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = currentUiState.locationSearchQuery,
+                        onValueChange = { query ->
+                            onLocationQueryChanged(query)
+                            locationSearchDropdownVisible = query.isNotBlank()
+                        },
+                        label = { Text("Your Location (Población)") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    locationSearchDropdownVisible = currentUiState.locationSearchQuery.isNotBlank()
+                                } else {
+                                    if (!focusState.isFocused) {
+                                        locationSearchDropdownVisible = false
+                                    }
+                                }
+                            },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+
+                    if (currentUiState.locationSuggestions.isNotEmpty() && currentUiState.locationSearchQuery.isNotBlank()) {
+                        ExposedDropdownMenu(
+                            expanded = locationSearchDropdownVisible,
+                            onDismissRequest = {
+                                locationSearchDropdownVisible = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            currentUiState.locationSuggestions.forEach { suggestion ->
+                                DropdownMenuItem(
+                                    text = { Text(suggestion.getDisplayName()) },
+                                    onClick = {
+                                        onLocationSelected(suggestion)
+                                        locationSearchDropdownVisible = false
+                                        focusManager.clearFocus()
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (currentUiState.userPoblacionForFilter != null) {
+                Text(
+                    "Max Distance: ${currentUiState.filterDistanceKm?.roundToInt()?.toString() ?: "Any"} km",
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = currentUiState.filterDistanceKm ?: 0f,
+                    onValueChange = { newValue -> onDistanceSelected(if (newValue == 0f) null else newValue) },
+                    valueRange = 0f..100f,
+                    steps = ((100f - 5f) / 5f).toInt() - 1,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    distanceOptions.forEach { dist -> TextButton(onClick = { onDistanceSelected(dist) }) { Text("${dist.toInt()}km") } }
+                    TextButton(onClick = { onDistanceSelected(null) }) { Text("Any") }
+                }
+            }
+
+            Divider(modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp))
+
+            if (currentUiState.userPoblacionForFilter != null || currentUiState.filterDistanceKm != null || currentUiState.selectedCategory != null) {
+                DropdownMenuItem(text = { Text("Clear All Filters") }, onClick = { onCategorySelected(null); onClearDistanceFilter() })
+            }
+            DropdownMenuItem(text = { Text("Done", fontWeight = FontWeight.Bold) }, onClick = { mainFilterExpanded = false })
         }
     }
 }

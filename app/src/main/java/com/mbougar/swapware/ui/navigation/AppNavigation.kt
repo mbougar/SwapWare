@@ -22,6 +22,8 @@ import com.mbougar.swapware.ui.screens.messages.MessagesScreen
 import com.mbougar.swapware.ui.screens.profile.ProfileScreen
 import java.net.URLDecoder
 import com.mbougar.swapware.ui.screens.auth.RegisterScreen
+import com.mbougar.swapware.ui.screens.myads.MyAdsScreen
+import com.mbougar.swapware.ui.screens.tos.TermsOfServiceScreen
 
 @Composable
 fun AppNavHost(
@@ -118,6 +120,12 @@ fun AppNavHost(
                 adTitle = adTitle,
                 navController = navController
             )
+        }
+        composable(Screen.MyAds.route) {
+            MyAdsScreen(navController = navController)
+        }
+        composable(Screen.TermsOfService.route) {
+            TermsOfServiceScreen(navController = navController)
         }
     }
 }

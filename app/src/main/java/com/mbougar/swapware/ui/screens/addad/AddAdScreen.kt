@@ -1,24 +1,53 @@
 package com.mbougar.swapware.ui.screens.addad
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.content.Context
-import android.location.Geocoder
-import androidx.compose.material.icons.filled.MyLocation
 import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -33,16 +62,12 @@ import coil.request.ImageRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
 import com.mbougar.swapware.data.model.HardwareCategory
 import com.mbougar.swapware.viewmodel.AddAdScreenEvent
 import com.mbougar.swapware.viewmodel.AddAdViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import java.util.Locale
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -57,39 +82,20 @@ fun AddAdScreen(
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
     val uiState by viewModel.uiState.collectAsState()
+    val locationSearchQuery by viewModel.locationSearchQuery.collectAsState()
+    val locationSuggestions by viewModel.locationSuggestions.collectAsState()
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
-    val locationPermissionState = rememberPermissionState(
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    )
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        imageUri = uri
-    }
+    ) { uri: Uri? -> imageUri = uri }
 
-    var citySuggestions by remember { mutableStateOf<List<String>>(emptyList()) }
-    var allSpanishCities by remember { mutableStateOf<List<String>>(emptyList()) }
-    var dropdownExpanded by remember { mutableStateOf(false) }
+    var locationDropdownExpanded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        allSpanishCities = loadCitiesFromAssets(context, "municipios.txt")
-    }
-
-    LaunchedEffect(uiState.sellerLocation, allSpanishCities) {
-        val currentText = uiState.sellerLocation
-        if (currentText.length > 1 && allSpanishCities.isNotEmpty()) {
-            citySuggestions = allSpanishCities.filter {
-                it.contains(currentText, ignoreCase = true)
-            }.take(10)
-            dropdownExpanded = citySuggestions.isNotEmpty() && currentText.isNotEmpty()
-        } else {
-            citySuggestions = emptyList()
-            dropdownExpanded = false
-        }
+    LaunchedEffect(locationSuggestions, locationSearchQuery) {
+        locationDropdownExpanded = locationSuggestions.isNotEmpty() && locationSearchQuery.isNotBlank()
     }
 
     LaunchedEffect(key1 = true) {
@@ -103,9 +109,6 @@ fun AddAdScreen(
                         )
                     }
                 }
-                is AddAdScreenEvent.RequestLocationPermission -> {
-                    locationPermissionState.launchPermissionRequest()
-                }
             }
         }
     }
@@ -114,7 +117,6 @@ fun AddAdScreen(
         if (uiState.isSuccess) {
             scope.launch { snackbarHostState.showSnackbar("Ad posted successfully!") }
             navController.popBackStack()
-            viewModel.consumeSuccess()
             viewModel.resetState()
         }
     }
@@ -175,57 +177,54 @@ fun AddAdScreen(
             )
 
             ExposedDropdownMenuBox(
-                expanded = dropdownExpanded && citySuggestions.isNotEmpty(),
-                onExpandedChange = {  },
+                expanded = locationDropdownExpanded,
+                onExpandedChange = {
+
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = uiState.sellerLocation,
-                    onValueChange = { viewModel.onSellerLocationChange(it) },
-                    label = { Text("Your City/Region (e.g., Jerez)") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
+                    value = locationSearchQuery,
+                    onValueChange = { query ->
+                        viewModel.onLocationSearchQueryChanged(query)
+                    },
+                    label = { Text("Your Población, Provincia") },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     shape = MaterialTheme.shapes.medium,
-                    trailingIcon = {
-                        if (uiState.isFetchingLocation) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        } else {
-                            IconButton(onClick = {
-                                if (locationPermissionState.status.isGranted) {
-                                    viewModel.requestCurrentLocation()
-                                } else {
-                                    locationPermissionState.launchPermissionRequest()
-                                }
-                            }) {
-                                Icon(Icons.Filled.MyLocation, "Get current city/region")
-                            }
-                        }
-                    }
+                    trailingIcon = null
                 )
 
-                if (citySuggestions.isNotEmpty()) {
-                    ExposedDropdownMenu(
-                        expanded = dropdownExpanded,
-                        onDismissRequest = { dropdownExpanded = false }
-                    ) {
-                        citySuggestions.forEach { suggestion ->
+                ExposedDropdownMenu(
+                    expanded = locationDropdownExpanded,
+                    onDismissRequest = { locationDropdownExpanded = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (locationSuggestions.isNotEmpty()) {
+                        locationSuggestions.forEach { suggestion ->
                             DropdownMenuItem(
-                                text = { Text(suggestion) },
+                                text = { Text(suggestion.getDisplayName()) },
                                 onClick = {
-                                    viewModel.onSellerLocationChange(suggestion)
-                                    dropdownExpanded = false
-                                }
+                                    viewModel.onPoblacionSelected(suggestion)
+                                    locationDropdownExpanded = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                             )
                         }
+                    } else if (locationSearchQuery.length > 1) {
+                        DropdownMenuItem(
+                            text = { Text("No matching locations found.") },
+                            onClick = { locationDropdownExpanded = false },
+                            enabled = false // Make it non-clickable
+                        )
                     }
                 }
             }
-            if (!locationPermissionState.status.isGranted && !uiState.isFetchingLocation) {
+
+            if (uiState.selectedPoblacion == null && locationSearchQuery.length > 1 && locationSuggestions.isEmpty()) {
                 Text(
-                    "Tap the icon to try auto-detecting your city (needs location permission), or enter manually.",
+                    "Type your 'Población, Provincia'. Ensure correct spelling.",
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(start = 4.dp, top = 2.dp, end = 4.dp)
                 )
@@ -281,11 +280,11 @@ fun AddAdScreen(
                         description = description,
                         priceStr = price,
                         category = selectedCategory?.displayName ?: "",
-                        imageUri = imageUri,
+                        imageUri = imageUri
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                enabled = !uiState.isLoading && title.isNotBlank() && description.isNotBlank() && price.isNotBlank() && selectedCategory != null && uiState.sellerLocation.isNotBlank(),
+                enabled = !uiState.isLoading && title.isNotBlank() && description.isNotBlank() && price.isNotBlank() && selectedCategory != null && uiState.selectedPoblacion != null,
                 shape = MaterialTheme.shapes.medium
             ) {
                 if (uiState.isLoading) {
@@ -299,17 +298,6 @@ fun AddAdScreen(
                 }
             }
         }
-    }
-}
-
-fun loadCitiesFromAssets(context: Context, fileName: String): List<String> {
-    return try {
-        context.assets.open(fileName).bufferedReader().useLines { lines ->
-            lines.map { it.trim() }.filter { it.isNotEmpty() }.toList()
-        }
-    } catch (e: Exception) {
-        Log.e("CityLoader", "Error loading cities from $fileName", e)
-        emptyList()
     }
 }
 

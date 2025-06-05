@@ -1,5 +1,6 @@
 package com.mbougar.swapware.data.remote
 
+import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -31,12 +32,17 @@ class FirestoreSource @Inject constructor(
             }
     }
 
-    suspend fun saveAd(ad: Ad): Result<Unit> {
+    suspend fun saveAd(ad: Ad): Result<String> {
         return try {
-            // usamos la id del Ad si la tiene (por que es una update) o generamos una nueva
-            adsCollection.document(ad.id.ifEmpty { adsCollection.document().id }).set(ad).await()
-            Result.success(Unit)
+            val docRef = if (ad.id.isBlank()) {
+                adsCollection.document()
+            } else {
+                adsCollection.document(ad.id)
+            }
+            docRef.set(ad.copy(id = docRef.id)).await()
+            Result.success(docRef.id)
         } catch (e: Exception) {
+            Log.e("FirestoreSource", "Error saving ad: ${ad.title}", e)
             Result.failure(e)
         }
     }
@@ -48,6 +54,16 @@ class FirestoreSource @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    fun getAdsByUserIdStream(userId: String): Flow<List<Ad>> {
+        return adsCollection
+            .whereEqualTo("sellerId", userId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .snapshots()
+            .map { snapshot ->
+                snapshot.toObjects(Ad::class.java)
+            }
     }
 
     // Obtenemos todas las comversaciones de un usuario

@@ -21,6 +21,8 @@ fun FavoritesScreen(
     navController: NavController,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
+    val favoritesViewModel: FavoritesViewModel = hiltViewModel()
+    val currentUserIdForFavorites = favoritesViewModel.uiState.collectAsState().value.currentUserId
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -60,8 +62,8 @@ fun FavoritesScreen(
                                 },
                                 onFavoriteClick = {
                                     viewModel.removeFromFavorites(ad.id)
-                                }
-                                //TODO hacer que el icono de favorito cambie cuando se pulsa
+                                },
+                                currentUserId = currentUserIdForFavorites
                             )
                         }
                     }

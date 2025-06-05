@@ -13,4 +13,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun login(email: String, pass: String) = firebaseAuthSource.login(email, pass)
     override suspend fun signup(email: String, pass: String, displayName: String) = firebaseAuthSource.signup(email, pass, displayName)
     override fun logout() = firebaseAuthSource.logout()
+    override suspend fun updateUserProfilePicture(photoUrl: String): Result<Unit> {
+        return firebaseAuthSource.updateProfilePicture(photoUrl)
+    }
 }

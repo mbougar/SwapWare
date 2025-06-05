@@ -6,4 +6,5 @@ interface AuthRepository {
     suspend fun login(email: String, pass: String): Result<com.google.firebase.auth.FirebaseUser>
     suspend fun signup(email: String, pass: String, displayName: String): Result<com.google.firebase.auth.FirebaseUser>
     fun logout()
+    suspend fun updateUserProfilePicture(photoUrl: String): Result<Unit>
 }

@@ -2,9 +2,11 @@ package com.mbougar.swapware.data.remote
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.net.toUri
 
 @Singleton
 class FirebaseAuthSource @Inject constructor(
@@ -43,5 +45,22 @@ class FirebaseAuthSource @Inject constructor(
 
     fun logout() {
         firebaseAuth.signOut()
+    }
+
+    suspend fun updateProfilePicture(photoUrl: String): Result<Unit> { // New
+        return try {
+            val user = getCurrentUser()
+            if (user != null) {
+                val profileUpdates = UserProfileChangeRequest.Builder()
+                    .setPhotoUri(photoUrl.toUri())
+                    .build()
+                user.updateProfile(profileUpdates).await()
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("User not logged in to update profile picture."))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

@@ -1,18 +1,11 @@
 package com.mbougar.swapware.viewmodel
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.app.Application
-import android.content.pm.PackageManager
-import android.location.Geocoder
 import android.net.Uri
 import android.util.Log
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
+import com.mbougar.swapware.data.local.PoblacionDao
+import com.mbougar.swapware.data.local.PoblacionLocation
 import com.mbougar.swapware.data.model.NewAdData
 import com.mbougar.swapware.data.repository.AdRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,28 +16,24 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Locale
 import javax.inject.Inject
 
 data class AddAdUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isSuccess: Boolean = false,
-    val sellerLocation: String = "",
-    val isFetchingLocation: Boolean = false,
-    val locationPermissionRequested: Boolean = false
+    val selectedPoblacion: PoblacionLocation? = null,
 )
 
 sealed class AddAdScreenEvent {
     data class ShowSnackbar(val message: String, val durationLong: Boolean = false) : AddAdScreenEvent()
-    object RequestLocationPermission : AddAdScreenEvent()
 }
 
 
 @HiltViewModel
 class AddAdViewModel @Inject constructor(
     private val adRepository: AdRepository,
-    private val application: Application
+    private val poblacionDao: PoblacionDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddAdUiState())
@@ -53,62 +42,45 @@ class AddAdViewModel @Inject constructor(
     private val _eventFlow = MutableSharedFlow<AddAdScreenEvent>()
     val eventFlow = _eventFlow.asSharedFlow()
 
+    private val _locationSearchQuery = MutableStateFlow("")
+    val locationSearchQuery: StateFlow<String> = _locationSearchQuery.asStateFlow()
 
-    fun onSellerLocationChange(location: String) {
-        _uiState.update { it.copy(sellerLocation = location) }
-    }
+    private val _locationSuggestions = MutableStateFlow<List<PoblacionLocation>>(emptyList())
+    val locationSuggestions: StateFlow<List<PoblacionLocation>> = _locationSuggestions.asStateFlow()
 
-    @SuppressLint("MissingPermission")
-    fun requestCurrentLocation() {
-        if (ContextCompat.checkSelfPermission(application, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(application, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            viewModelScope.launch {
-                _eventFlow.emit(AddAdScreenEvent.RequestLocationPermission)
-            }
-            return
-        }
+    private var searchJob: kotlinx.coroutines.Job? = null
 
+    fun onLocationSearchQueryChanged(query: String) {
+        _locationSearchQuery.value = query
+        searchJob?.cancel()
 
-        _uiState.update { it.copy(isFetchingLocation = true) }
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
-        val cancellationTokenSource = CancellationTokenSource()
-
-        fusedLocationClient.getCurrentLocation(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            cancellationTokenSource.token
-        ).addOnSuccessListener { location ->
-            if (location != null) {
-                val geocoder = Geocoder(application, Locale.getDefault())
+        if (query.length > 1) {
+            searchJob = viewModelScope.launch {
+                kotlinx.coroutines.delay(300)
                 try {
-                    @Suppress("DEPRECATION")
-                    val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                    if (addresses?.isNotEmpty() == true) {
-                        val address = addresses[0]
-                        val city = address.locality ?: address.subAdminArea ?: address.adminArea ?: "Unknown area"
-                        _uiState.update { it.copy(sellerLocation = city) }
-                        Log.d("AddAdViewModel", "Current location city: $city")
-                    } else {
-                        viewModelScope.launch { _eventFlow.emit(AddAdScreenEvent.ShowSnackbar("Could not determine city from current location.")) }
-                    }
+                    val results = poblacionDao.searchPoblaciones(query, limit = 10)
+                    _locationSuggestions.value = results
+                    Log.d("AddAdViewModel", "Search for '$query' found ${results.size} suggestions.")
                 } catch (e: Exception) {
-                    viewModelScope.launch { _eventFlow.emit(AddAdScreenEvent.ShowSnackbar("Error determining city. Please enter manually.")) }
-                    Log.e("AddAdViewModel", "Geocoder error from current location", e)
+                    _locationSuggestions.value = emptyList()
+                    Log.e("AddAdViewModel", "Error searching poblaciones for '$query'", e)
                 }
-            } else {
-                viewModelScope.launch { _eventFlow.emit(AddAdScreenEvent.ShowSnackbar("Failed to get current location. Ensure location services are enabled or enter manually.", true)) }
-                Log.d("AddAdViewModel", "getCurrentLocation returned null.")
             }
-            _uiState.update { it.copy(isFetchingLocation = false) }
-        }.addOnFailureListener { exception ->
-            viewModelScope.launch { _eventFlow.emit(AddAdScreenEvent.ShowSnackbar("Error fetching current location: ${exception.message}")) }
-            Log.e("AddAdViewModel", "getCurrentLocation failed", exception)
-            _uiState.update { it.copy(isFetchingLocation = false) }
-        }.addOnCanceledListener {
-            viewModelScope.launch { _eventFlow.emit(AddAdScreenEvent.ShowSnackbar("Location fetch canceled.")) }
-            _uiState.update { it.copy(isFetchingLocation = false) }
+        } else {
+            _locationSuggestions.value = emptyList()
+        }
+
+        if (_uiState.value.selectedPoblacion?.getDisplayName() != query) {
+            _uiState.update { it.copy(selectedPoblacion = null) }
         }
     }
 
+    fun onPoblacionSelected(poblacion: PoblacionLocation) {
+        _uiState.update { it.copy(selectedPoblacion = poblacion) }
+        _locationSearchQuery.value = poblacion.getDisplayName()
+        _locationSuggestions.value = emptyList()
+        searchJob?.cancel()
+    }
 
     fun addAd(
         title: String,
@@ -117,11 +89,11 @@ class AddAdViewModel @Inject constructor(
         category: String,
         imageUri: Uri?
     ) {
-        val currentSellerLocation = _uiState.value.sellerLocation
+        val selectedPoblacion = _uiState.value.selectedPoblacion
         val price = priceStr.toDoubleOrNull()
 
-        if (title.isBlank() || description.isBlank() || price == null || category.isBlank() || currentSellerLocation.isBlank()) {
-            _uiState.update { it.copy(error = "Please fill all fields correctly, including location.") }
+        if (title.isBlank() || description.isBlank() || price == null || category.isBlank() || selectedPoblacion == null) {
+            _uiState.update { it.copy(error = "Please fill all fields correctly, including selecting a valid location from suggestions.") }
             return
         }
         if (price <= 0) {
@@ -138,7 +110,9 @@ class AddAdViewModel @Inject constructor(
                 price = price,
                 category = category,
                 imageUri = imageUri,
-                sellerLocation = currentSellerLocation
+                sellerLocation = selectedPoblacion.getDisplayName(),
+                sellerLatitude = selectedPoblacion.latitude,
+                sellerLongitude = selectedPoblacion.longitude
             )
 
             val result = adRepository.addAd(adData)
@@ -153,6 +127,8 @@ class AddAdViewModel @Inject constructor(
 
     fun resetState() {
         _uiState.value = AddAdUiState()
+        _locationSearchQuery.value = ""
+        _locationSuggestions.value = emptyList()
     }
 
     fun consumeError() {

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mbougar.swapware.data.model.Ad
 import com.mbougar.swapware.data.repository.AdRepository
+import com.mbougar.swapware.data.repository.AuthRepository
 import com.mbougar.swapware.data.repository.MessageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -13,6 +14,8 @@ import javax.inject.Inject
 
 data class AdDetailUiState(
     val ad: Ad? = null,
+    val currentUserId: String? = null,
+    val isOwnAd: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
     val isInitiatingConversation: Boolean = false,
@@ -24,6 +27,7 @@ data class AdDetailUiState(
 class AdDetailViewModel @Inject constructor(
     private val adRepository: AdRepository,
     private val messageRepository: MessageRepository,
+    private val authRepository: AuthRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -33,6 +37,7 @@ class AdDetailViewModel @Inject constructor(
     val uiState: StateFlow<AdDetailUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.update { it.copy(currentUserId = authRepository.getCurrentUser()?.uid) }
         loadAdDetails()
     }
 
@@ -42,7 +47,7 @@ class AdDetailViewModel @Inject constructor(
             try {
                 val ad = adRepository.getAdById(adId)
                 if (ad != null) {
-                    _uiState.update { it.copy(ad = ad, isLoading = false) }
+                    _uiState.update { it.copy(ad = ad, isLoading = false, isOwnAd = ad.sellerId == it.currentUserId && it.currentUserId != null) }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Ad not found") }
                 }
@@ -54,6 +59,7 @@ class AdDetailViewModel @Inject constructor(
 
     fun toggleFavorite() {
         val currentAd = _uiState.value.ad ?: return
+        if (_uiState.value.isOwnAd) return
         viewModelScope.launch {
             _uiState.update { it.copy(ad = currentAd.copy(isFavorite = !currentAd.isFavorite)) }
             adRepository.toggleFavorite(currentAd.id, !currentAd.isFavorite)

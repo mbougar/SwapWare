@@ -1,8 +1,12 @@
 package com.mbougar.swapware.viewmodel
 
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mbougar.swapware.data.repository.AuthRepository
+import com.google.firebase.auth.FirebaseUser // Ensure this is imported
+import com.mbougar.swapware.data.remote.FirebaseStorageSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,13 +17,18 @@ import javax.inject.Inject
 data class ProfileUiState(
     val userEmail: String? = null,
     val userDisplayName: String? = null,
-    val isLoading: Boolean = false
+    val profilePictureUrl: String? = null,
+    val userRating: Float? = null,
+    val isLoading: Boolean = false,
+    val isUploadingPicture: Boolean = false,
+    val pictureUploadError: String? = null,
+    val showDeleteAccountDialog: Boolean = false
 )
-
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val storageSource: FirebaseStorageSource
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -31,15 +40,73 @@ class ProfileViewModel @Inject constructor(
 
     private fun loadUserProfile() {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
             val user = authRepository.getCurrentUser()
-            _uiState.value = ProfileUiState(
+            _uiState.value = _uiState.value.copy(
                 userEmail = user?.email,
-                userDisplayName = user?.displayName
+                userDisplayName = user?.displayName,
+                profilePictureUrl = user?.photoUrl?.toString(),
+                userRating = 4.5f,
+                isLoading = false,
+                isUploadingPicture = false,
+                pictureUploadError = null
             )
         }
     }
 
+    fun onProfilePictureSelected(imageUri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isUploadingPicture = true, pictureUploadError = null)
+            val userId = authRepository.getCurrentUser()?.uid
+            if (userId == null) {
+                _uiState.value = _uiState.value.copy(isUploadingPicture = false, pictureUploadError = "User not found.")
+                return@launch
+            }
+
+            val uploadResult = storageSource.uploadImage(imageUri, "profile_pictures/$userId")
+
+            if (uploadResult.isSuccess) {
+                val downloadUrl = uploadResult.getOrNull()
+                if (downloadUrl != null) {
+                    val updateResult = authRepository.updateUserProfilePicture(downloadUrl)
+                    if (updateResult.isSuccess) {
+                        loadUserProfile()
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isUploadingPicture = false,
+                            pictureUploadError = updateResult.exceptionOrNull()?.message ?: "Failed to update profile."
+                        )
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(isUploadingPicture = false, pictureUploadError = "Failed to get download URL.")
+                }
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isUploadingPicture = false,
+                    pictureUploadError = uploadResult.exceptionOrNull()?.message ?: "Failed to upload image."
+                )
+            }
+        }
+    }
+
+    fun clearPictureUploadError() {
+        _uiState.value = _uiState.value.copy(pictureUploadError = null)
+    }
+
     fun logout() {
         authRepository.logout()
+    }
+
+    fun onShowDeleteAccountDialog(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showDeleteAccountDialog = show)
+    }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            // TODO: Implement actual account deletion logic
+            Log.d("ProfileViewModel", "Account deletion requested but not yet implemented.")
+            _uiState.value = _uiState.value.copy(showDeleteAccountDialog = false)
+            logout()
+        }
     }
 }

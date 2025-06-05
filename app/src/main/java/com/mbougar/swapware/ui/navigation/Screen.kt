@@ -8,18 +8,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import java.net.URLEncoder
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    object Home : Screen("home", "Home", Icons.Default.Home)
-    object Favorites : Screen("favorites", "Favorites", Icons.Default.Favorite)
-    object AddAd : Screen("add_ad", "Add", Icons.Default.AddCircle)
-    object Messages : Screen("messages", "Messages", Icons.AutoMirrored.Filled.Chat)
-    object Profile : Screen("profile", "Profile", Icons.Default.Person)
+    data object Home : Screen("home", "Home", Icons.Default.Home)
+    data object Favorites : Screen("favorites", "Favorites", Icons.Default.Favorite)
+    data object AddAd : Screen("add_ad", "Add", Icons.Default.AddCircle)
+    data object Messages : Screen("messages", "Messages", Icons.AutoMirrored.Filled.Chat)
+    data object Profile : Screen("profile", "Profile", Icons.Default.Person)
 
-    object Login : Screen("login", "Login", Icons.Default.Lock)
-    object Register : Screen("register", "Register", Icons.Default.PersonAdd)
-    object AdDetail : Screen("ad_detail/{adId}", "Details", Icons.AutoMirrored.Filled.List) {
+    data object Login : Screen("login", "Login", Icons.Default.Lock)
+    data object Register : Screen("register", "Register", Icons.Default.PersonAdd)
+    data object AdDetail : Screen("ad_detail/{adId}", "Details", Icons.AutoMirrored.Filled.List) {
         fun createRoute(adId: String) = "ad_detail/$adId"
     }
-    object ChatDetail : Screen(
+    data object ChatDetail : Screen(
         route = "chat_detail/{conversationId}/{otherUserDisplayName}/{adTitle}",
         title = "Chat",
         icon =  Icons.AutoMirrored.Filled.Chat
@@ -30,6 +30,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
             return "chat_detail/$conversationId/$encodedDisplayName/$encodedTitle"
         }
     }
+
+    data object MyAds : Screen("my_ads", "My Ads", Icons.Filled.Storefront)
+    data object TermsOfService : Screen("terms_of_service", "Terms of Service", Icons.Filled.Article)
 }
 
 val bottomNavItems = listOf(

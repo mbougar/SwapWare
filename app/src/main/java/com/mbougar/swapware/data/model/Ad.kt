@@ -20,4 +20,6 @@ data class Ad(
     val timestamp: Long = System.currentTimeMillis(),
     var isFavorite: Boolean = false, // Local state
     val sellerLocation: String? = null,
+    val sellerLatitude: Double? = null,
+    val sellerLongitude: Double? = null
 )

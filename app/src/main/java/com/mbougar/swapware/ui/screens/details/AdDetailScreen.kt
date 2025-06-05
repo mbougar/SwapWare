@@ -77,12 +77,14 @@ fun AdDetailScreen(
                 },
                 actions = {
                     uiState.ad?.let { ad ->
-                        IconButton(onClick = { viewModel.toggleFavorite() }) {
-                            Icon(
-                                imageVector = if (ad.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = "Favorite",
-                                tint = if (ad.isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                            )
+                        if (!uiState.isOwnAd) {
+                            IconButton(onClick = { viewModel.toggleFavorite() }) {
+                                Icon(
+                                    imageVector = if (ad.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = "Favorite",
+                                    tint = if (ad.isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                                )
+                            }
                         }
                     }
                 }
@@ -171,7 +173,7 @@ fun AdDetailContent(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text("Located in: $location", style = MaterialTheme.typography.bodyMedium)
+                            Text(location, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
 

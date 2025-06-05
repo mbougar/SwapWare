@@ -5,6 +5,8 @@ import com.google.firebase.Timestamp
 import com.mbougar.swapware.data.model.Ad
 import com.mbougar.swapware.data.model.Conversation
 import com.mbougar.swapware.data.model.Message
+import com.mbougar.swapware.data.model.UserProfileData
+import com.mbougar.swapware.data.model.UserRating
 import com.mbougar.swapware.data.remote.FirebaseAuthSource
 import com.mbougar.swapware.data.remote.FirestoreSource
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +18,8 @@ import javax.inject.Singleton
 @Singleton
 class MessageRepositoryImpl @Inject constructor(
     private val firestoreSource: FirestoreSource,
-    private val authSource: FirebaseAuthSource
+    private val authSource: FirebaseAuthSource,
+    private val adRepository: AdRepository
 ) : MessageRepository {
 
     override fun getConversationsStream(): Flow<Result<List<Conversation>>> = flow {
@@ -124,6 +127,57 @@ class MessageRepositoryImpl @Inject constructor(
             }
         } else {
             return@withContext Result.failure(findResult.exceptionOrNull() ?: Exception("Failed to search for conversations"))
+        }
+    }
+
+    override suspend fun getAdDetailsForConversation(adId: String): Ad? {
+        return adRepository.getAdById(adId)
+    }
+
+    override suspend fun markAdAsSoldViaConversation(
+        conversationId: String,
+        adId: String,
+        buyerIdInChat: String,
+        sellerId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val markAdResult = adRepository.markAdAsSold(adId, buyerIdInChat)
+        if (markAdResult.isFailure) {
+            return@withContext markAdResult
+        }
+        return@withContext firestoreSource.updateConversationAdSoldStatus(conversationId, buyerIdInChat)
+    }
+
+    override suspend fun submitRatingAndUpdateProfile(
+        rating: UserRating,
+        conversationId: String,
+        isSellerSubmitting: Boolean
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val submitRatingResult = firestoreSource.submitRating(rating)
+        if (submitRatingResult.isFailure) {
+            return@withContext submitRatingResult
+        }
+
+        val convUpdateResult = firestoreSource.updateConversationRatingStatus(conversationId, isSellerSubmitting)
+        if (convUpdateResult.isFailure) {
+            Log.w("MessageRepo", "Failed to update conversation rating status, but rating was submitted.")
+        }
+
+        val userProfileResult = firestoreSource.getUserProfile(rating.ratedUserId)
+        if (userProfileResult.isSuccess) {
+            val userProfile = userProfileResult.getOrNull() ?: UserProfileData(userId = rating.ratedUserId)
+
+            val newTotalPoints = (userProfile.totalRatingPoints) + rating.ratingValue
+            val newNumberOfRatings = (userProfile.numberOfRatings) + 1
+            val newAverage = if (newNumberOfRatings > 0) newTotalPoints.toFloat() / newNumberOfRatings else 0.0f
+
+            return@withContext firestoreSource.updateUserProfileRating(
+                rating.ratedUserId,
+                newTotalPoints,
+                newNumberOfRatings,
+                newAverage
+            )
+        } else {
+            return@withContext Result.failure(userProfileResult.exceptionOrNull() ?: Exception("Failed to get user profile for rating update"))
         }
     }
 }

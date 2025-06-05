@@ -3,7 +3,10 @@ package com.mbougar.swapware.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mbougar.swapware.data.model.Ad
+import com.mbougar.swapware.data.model.Conversation
 import com.mbougar.swapware.data.model.Message
+import com.mbougar.swapware.data.model.UserRating
 import com.mbougar.swapware.data.repository.AuthRepository
 import com.mbougar.swapware.data.repository.MessageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +26,11 @@ data class ChatDetailUiState(
     val error: String? = null,
     val currentUserId: String? = null,
     val otherUserDisplayName: String = "",
-    val adTitle: String = ""
+    val adTitle: String = "",
+    val adDetails: Ad? = null,
+    val conversationDetails: Conversation? = null,
+    val showRatingDialogForUser: String? = null,
+    val ratingSubmissionInProgress: Boolean = false,
 )
 
 sealed class ChatListItem {
@@ -82,6 +89,7 @@ class ChatDetailViewModel @Inject constructor(
     private val otherUserDisplayName: String = checkNotNull(savedStateHandle["otherUserDisplayName"])
     private val adTitle: String = checkNotNull(savedStateHandle["adTitle"])
 
+    private val adIdFromConversation: MutableStateFlow<String?> = MutableStateFlow(null)
 
     private val _uiState = MutableStateFlow(
         ChatDetailUiState(
@@ -93,6 +101,20 @@ class ChatDetailViewModel @Inject constructor(
     val uiState: StateFlow<ChatDetailUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            val convResult = messageRepository.getConversationDetails(conversationId)
+            if (convResult.isSuccess) {
+                val conversation = convResult.getOrNull()
+                _uiState.update { it.copy(conversationDetails = conversation) }
+                conversation?.adId?.let { currentAdId ->
+                    adIdFromConversation.value = currentAdId
+                    val ad = messageRepository.getAdDetailsForConversation(currentAdId)
+                    _uiState.update { it.copy(adDetails = ad) }
+                }
+            } else {
+                _uiState.update { it.copy(error = "Failed to load conversation details.")}
+            }
+        }
         loadMessages()
     }
 
@@ -135,6 +157,96 @@ class ChatDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(inputText = "", isSending = false) }
             } else {
                 _uiState.update { it.copy(isSending = false, error = result.exceptionOrNull()?.message ?: "Failed to send message") }
+            }
+        }
+    }
+
+    fun markAdAsSoldToOtherUser() {
+        val ad = _uiState.value.adDetails ?: return
+        val currentConversation = _uiState.value.conversationDetails ?: return
+        val currentUserId = _uiState.value.currentUserId ?: return
+
+        if (ad.sellerId != currentUserId || ad.isSold) {
+            _uiState.update { it.copy(error = "Cannot mark ad as sold.")}
+            return
+        }
+
+        val otherParticipantId = currentConversation.participantIds.find { it != currentUserId }
+        if (otherParticipantId == null) {
+            _uiState.update { it.copy(error = "Could not identify buyer in conversation.")}
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = messageRepository.markAdAsSoldViaConversation(
+                conversationId = currentConversation.id,
+                adId = ad.id,
+                buyerIdInChat = otherParticipantId,
+                sellerId = ad.sellerId
+            )
+            if (result.isSuccess) {
+                val updatedAd = messageRepository.getAdDetailsForConversation(ad.id)
+                val updatedConv = messageRepository.getConversationDetails(currentConversation.id).getOrNull()
+                _uiState.update { it.copy(isLoading = false, adDetails = updatedAd, conversationDetails = updatedConv, error = null) }
+            } else {
+                _uiState.update { it.copy(isLoading = false, error = result.exceptionOrNull()?.message ?: "Failed to mark as sold.") }
+            }
+        }
+    }
+
+    fun onAttemptToRateUser(userIdToRate: String) {
+        _uiState.update { it.copy(showRatingDialogForUser = userIdToRate) }
+    }
+
+    fun onDismissRatingDialog() {
+        _uiState.update { it.copy(showRatingDialogForUser = null) }
+    }
+
+    fun submitRating(ratingValue: Int) {
+        val ratedUserId = _uiState.value.showRatingDialogForUser ?: return
+        val raterUserId = _uiState.value.currentUserId ?: return
+        val ad = _uiState.value.adDetails ?: return
+        val currentConversation = _uiState.value.conversationDetails ?: return
+
+        if (ratingValue < 1 || ratingValue > 5) {
+            _uiState.update { it.copy(error = "Invalid rating value.") }
+            return
+        }
+
+        val isSellerRatingBuyer = ad.sellerId == raterUserId && ratedUserId == currentConversation.adSoldToParticipantId
+
+        if (isSellerRatingBuyer && currentConversation.sellerRatedBuyerForAd) {
+            _uiState.update { it.copy(error = "You have already rated the buyer for this transaction.", showRatingDialogForUser = null) }
+            return
+        }
+        if (!isSellerRatingBuyer && ad.sellerId == ratedUserId && raterUserId == currentConversation.adSoldToParticipantId && currentConversation.buyerRatedSellerForAd) {
+            _uiState.update { it.copy(error = "You have already rated the seller for this transaction.", showRatingDialogForUser = null) }
+            return
+        }
+
+
+        val userRating = UserRating(
+            ratedUserId = ratedUserId,
+            raterUserId = raterUserId,
+            adId = ad.id,
+            conversationId = conversationId,
+            ratingValue = ratingValue
+        )
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(ratingSubmissionInProgress = true) }
+            val result = messageRepository.submitRatingAndUpdateProfile(
+                rating = userRating,
+                conversationId = currentConversation.id,
+                isSellerSubmitting = isSellerRatingBuyer
+            )
+
+            if (result.isSuccess) {
+                val updatedConv = messageRepository.getConversationDetails(currentConversation.id).getOrNull()
+                _uiState.update { it.copy(ratingSubmissionInProgress = false, showRatingDialogForUser = null, conversationDetails = updatedConv, error = null) }
+            } else {
+                _uiState.update { it.copy(ratingSubmissionInProgress = false, error = result.exceptionOrNull()?.message ?: "Failed to submit rating.") }
             }
         }
     }

@@ -21,5 +21,8 @@ data class Ad(
     var isFavorite: Boolean = false, // Local state
     val sellerLocation: String? = null,
     val sellerLatitude: Double? = null,
-    val sellerLongitude: Double? = null
+    val sellerLongitude: Double? = null,
+    val isSold: Boolean = false,
+    val soldToUserId: String? = null,
+    val soldTimestamp: Long? = null
 )

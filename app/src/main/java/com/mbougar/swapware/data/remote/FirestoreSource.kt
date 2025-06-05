@@ -9,6 +9,8 @@ import com.google.firebase.firestore.ktx.toObject // For object mapping
 import com.mbougar.swapware.data.model.Ad
 import com.mbougar.swapware.data.model.Conversation
 import com.mbougar.swapware.data.model.Message
+import com.mbougar.swapware.data.model.UserProfileData
+import com.mbougar.swapware.data.model.UserRating
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -21,6 +23,8 @@ class FirestoreSource @Inject constructor(
 ) {
     private val adsCollection = firestore.collection("ads")
     private val conversationsCollection = firestore.collection("conversations")
+    private val userRatingsCollection = firestore.collection("user_ratings")
+    private val usersCollection = firestore.collection("users")
 
     // Flow nos da real-time update
     fun getAdsStream(): Flow<List<Ad>> {
@@ -163,13 +167,102 @@ class FirestoreSource @Inject constructor(
         }
     }
 
-    // TODO Funciones a implementar
-    /*
-    suspend fun createConversation(conversation: Conversation): Result<String> {  }
-    suspend fun sendMessage(conversationId: String, message: Message): Result<Unit> {  }
-    fun getMessagesStream(conversationId: String): Flow<List<Message>> {  }
-    suspend fun updateConversationSummary(conversationId: String, lastMessage: Message) {  }
-    */
+    suspend fun updateConversationAdSoldStatus(
+        conversationId: String,
+        soldToParticipantId: String
+    ): Result<Unit> {
+        return try {
+            conversationsCollection.document(conversationId).update(
+                mapOf(
+                    "adIsSoldInThisConversation" to true,
+                    "adSoldToParticipantId" to soldToParticipantId
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FirestoreSource", "Error updating conversation ad sold status $conversationId", e)
+            Result.failure(e)
+        }
+    }
 
-    // TODO () Implementar tambien fetching de user profiles, messages...
+    suspend fun updateConversationRatingStatus(
+        conversationId: String,
+        raterIsSeller: Boolean
+    ): Result<Unit> {
+        return try {
+            val fieldToUpdate = if (raterIsSeller) "sellerRatedBuyerForAd" else "buyerRatedSellerForAd"
+            conversationsCollection.document(conversationId).update(fieldToUpdate, true).await()
+            Result.success(Unit)
+        } catch (e:Exception) {
+            Log.e("FirestoreSource", "Error updating conversation rating status for $conversationId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun markAdAsSold(adId: String, buyerUserId: String, soldTime: Long): Result<Unit> {
+        return try {
+            adsCollection.document(adId).update(
+                mapOf(
+                    "isSold" to true,
+                    "soldToUserId" to buyerUserId,
+                    "soldTimestamp" to soldTime
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FirestoreSource", "Error marking ad $adId as sold", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun submitRating(rating: UserRating): Result<Unit> {
+        return try {
+            val ratingDocId = "${rating.raterUserId}_${rating.ratedUserId}_${rating.adId}"
+            userRatingsCollection.document(ratingDocId).set(rating).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FirestoreSource", "Error submitting rating", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getUserProfile(userId: String): Result<UserProfileData?> {
+        return try {
+            val document = usersCollection.document(userId).get().await()
+            Result.success(document.toObject(UserProfileData::class.java))
+        } catch (e: Exception) {
+            Log.e("FirestoreSource", "Error getting user profile $userId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserProfileRating(userId: String, newTotalPoints: Long, newNumberOfRatings: Long, newAverage: Float): Result<Unit> {
+        return try {
+            usersCollection.document(userId).update(
+                mapOf(
+                    "totalRatingPoints" to newTotalPoints,
+                    "numberOfRatings" to newNumberOfRatings,
+                    "averageRating" to newAverage
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FirestoreSource", "Error updating user profile rating for $userId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createUserProfileDocument(userId: String, displayName: String?, email: String?): Result<Unit> {
+        return try {
+            val userProfile = UserProfileData(
+                userId = userId,
+                displayName = displayName,
+            )
+            usersCollection.document(userId).set(userProfile).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FirestoreSource", "Error creating user profile for $userId", e)
+            Result.failure(e)
+        }
+    }
 }

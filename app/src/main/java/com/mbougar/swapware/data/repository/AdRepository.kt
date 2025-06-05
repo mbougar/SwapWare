@@ -14,4 +14,5 @@ interface AdRepository {
     suspend fun refreshAds(): Result<Unit>
     suspend fun getAdById(adId: String): Ad?
     fun getAdsByUserId(userId: String): Flow<Result<List<Ad>>>
+    suspend fun markAdAsSold(adId: String, buyerUserId: String): Result<Unit>
 }

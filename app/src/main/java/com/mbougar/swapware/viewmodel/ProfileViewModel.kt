@@ -6,7 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mbougar.swapware.data.repository.AuthRepository
 import com.google.firebase.auth.FirebaseUser // Ensure this is imported
+import com.mbougar.swapware.data.model.UserProfileData
 import com.mbougar.swapware.data.remote.FirebaseStorageSource
+import com.mbougar.swapware.data.remote.FirestoreSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +30,8 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val storageSource: FirebaseStorageSource
+    private val storageSource: FirebaseStorageSource,
+    private val firestoreSource: FirestoreSource
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -38,15 +41,25 @@ class ProfileViewModel @Inject constructor(
         loadUserProfile()
     }
 
-    private fun loadUserProfile() {
+    fun loadUserProfile() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val user = authRepository.getCurrentUser()
+            var userProfileData: UserProfileData? = null
+            if (user != null) {
+                val profileResult = firestoreSource.getUserProfile(user.uid)
+                if (profileResult.isSuccess) {
+                    userProfileData = profileResult.getOrNull()
+                } else {
+                    Log.e("ProfileVM", "Failed to load user profile: ${profileResult.exceptionOrNull()?.message}")
+                }
+            }
+
             _uiState.value = _uiState.value.copy(
                 userEmail = user?.email,
-                userDisplayName = user?.displayName,
-                profilePictureUrl = user?.photoUrl?.toString(),
-                userRating = 4.5f,
+                userDisplayName = userProfileData?.displayName ?: user?.displayName,
+                profilePictureUrl = userProfileData?.profilePictureUrl ?: user?.photoUrl?.toString(),
+                userRating = userProfileData?.takeIf { it.numberOfRatings > 0 }?.averageRating,
                 isLoading = false,
                 isUploadingPicture = false,
                 pictureUploadError = null

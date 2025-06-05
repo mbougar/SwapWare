@@ -12,7 +12,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -46,6 +51,10 @@ fun ChatDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val ad = uiState.adDetails
+    val conversation = uiState.conversationDetails
+    val currentUserId = uiState.currentUserId
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
@@ -75,6 +84,14 @@ fun ChatDetailScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (ad != null && currentUserId == ad.sellerId &&
+                        conversation != null && !conversation.adIsSoldInThisConversation && !ad.isSold) {
+                        IconButton(onClick = { viewModel.markAdAsSoldToOtherUser() }) {
+                            Icon(Icons.Filled.Sell, contentDescription = "Mark as Sold")
+                        }
+                    }
                 }
             )
         },
@@ -88,7 +105,7 @@ fun ChatDetailScreen(
                 .imePadding()
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                if (uiState.isLoading) {
+                if (uiState.isLoading && uiState.chatListItems.isEmpty()) {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 } else {
                     MessageList(
@@ -96,6 +113,47 @@ fun ChatDetailScreen(
                         currentUserId = uiState.currentUserId ?: "",
                         listState = listState
                     )
+                }
+            }
+
+            if (ad != null && currentUserId != null && conversation != null && conversation.adIsSoldInThisConversation) {
+                val otherUserIdInChat = conversation.participantIds.find { it != currentUserId }
+
+                if (otherUserIdInChat != null) {
+                    val sellerId = ad.sellerId
+                    val buyerId = conversation.adSoldToParticipantId
+
+                    val userToRateId: String?
+                    val canRate: Boolean
+
+                    if (currentUserId == sellerId && buyerId == otherUserIdInChat && !conversation.sellerRatedBuyerForAd) {
+                        userToRateId = buyerId
+                        canRate = true
+                    } else if (currentUserId == buyerId && sellerId == otherUserIdInChat && !conversation.buyerRatedSellerForAd) {
+                        userToRateId = sellerId
+                        canRate = true
+                    } else {
+                        userToRateId = null
+                        canRate = false
+                    }
+
+                    if (canRate && userToRateId != null) {
+                        val otherUserToRateDisplayName = if(userToRateId == uiState.otherUserDisplayName){
+                            conversation.participantDisplayNames.getOrNull(conversation.participantIds.indexOf(userToRateId)) ?: "User"
+                        } else {
+                            "User"
+                        }
+
+                        RateUserBar(
+                            userNameToRate = otherUserToRateDisplayName,
+                            onClickRate = { viewModel.onAttemptToRateUser(userToRateId) }
+                        )
+                    } else if (conversation.sellerRatedBuyerForAd && conversation.buyerRatedSellerForAd) {
+                        Text("Transaction complete. Both users rated.",
+                            modifier = Modifier.padding(8.dp).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)).padding(8.dp),
+                            textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
 
@@ -111,6 +169,86 @@ fun ChatDetailScreen(
             )
         }
     }
+
+    if (uiState.showRatingDialogForUser != null) {
+        RatingDialog(
+            userNameToRate = uiState.otherUserDisplayName,
+            onDismiss = { viewModel.onDismissRatingDialog() },
+            onSubmitRating = { ratingValue -> viewModel.submitRating(ratingValue) },
+            isSubmitting = uiState.ratingSubmissionInProgress
+        )
+    }
+}
+
+@Composable
+fun RateUserBar(userNameToRate: String, onClickRate: () -> Unit) {
+    Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Rate $userNameToRate for this transaction:", style = MaterialTheme.typography.bodyMedium)
+            Button(onClick = onClickRate, shape = MaterialTheme.shapes.small) {
+                Icon(Icons.Filled.Stars, contentDescription = "Rate", modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Rate")
+            }
+        }
+    }
+}
+
+@Composable
+fun RatingDialog(
+    userNameToRate: String,
+    onDismiss: () -> Unit,
+    onSubmitRating: (Int) -> Unit,
+    isSubmitting: Boolean
+) {
+    var selectedRating by remember { mutableStateOf(0) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rate $userNameToRate") },
+        text = {
+            Column {
+                Text("Select a rating (1-5 stars):")
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    (1..5).forEach { star ->
+                        IconButton(onClick = { selectedRating = star }) {
+                            Icon(
+                                imageVector = if (star <= selectedRating) Icons.Filled.Star else Icons.Filled.StarOutline,
+                                contentDescription = "Star $star",
+                                tint = if (star <= selectedRating) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (selectedRating > 0) onSubmitRating(selectedRating) },
+                enabled = selectedRating > 0 && !isSubmitting
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                } else {
+                    Text("Submit")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

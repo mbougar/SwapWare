@@ -45,7 +45,6 @@ class HomeViewModel @Inject constructor(
     private val _filterDistanceKmFlow = MutableStateFlow<Float?>(null)
     private val _locationSearchQueryFlow = MutableStateFlow("")
 
-
     init {
         _uiState.update { it.copy(currentUserId = authRepository.getCurrentUser()?.uid) }
         loadAds()
@@ -80,7 +79,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
 
                     adsResult.onSuccess { ads ->
-                        var filteredAds = ads
+                        var filteredAds = ads.filter { !it.isSold }
                         if (category != null) {
                             filteredAds = filteredAds.filter { ad -> ad.category.equals(category, ignoreCase = true) }
                         }

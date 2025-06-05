@@ -171,4 +171,16 @@ class AdRepositoryImpl @Inject constructor(
     }.catch { e ->
         emit(Result.failure(Exception("Failed to observe user's ads", e)))
     }.flowOn(Dispatchers.IO)
+
+    override suspend fun markAdAsSold(adId: String, buyerUserId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val soldTime = System.currentTimeMillis()
+        val firestoreResult = firestoreSource.markAdAsSold(adId, buyerUserId, soldTime)
+        if (firestoreResult.isSuccess) {
+            val ad = adDao.getAdById(adId)
+            ad?.let {
+                adDao.updateAd(it.copy(isSold = true, soldToUserId = buyerUserId, soldTimestamp = soldTime))
+            }
+        }
+        firestoreResult
+    }
 }

@@ -203,7 +203,7 @@ class FirestoreSource @Inject constructor(
         return try {
             adsCollection.document(adId).update(
                 mapOf(
-                    "isSold" to true,
+                    "sold" to true,
                     "soldToUserId" to buyerUserId,
                     "soldTimestamp" to soldTime
                 )

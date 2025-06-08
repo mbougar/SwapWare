@@ -199,7 +199,7 @@ fun AdDetailContent(
                         Text("Contact Seller")
                     }
 
-                    Text(text = "${ad.isSold}")
+                    Text(text = "${ad.sold}")
                 }
             }
         }

@@ -283,7 +283,7 @@ fun AdItem(
                 }
             }
 
-            if (ad.isSold) {
+            if (ad.sold) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)

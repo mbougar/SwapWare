@@ -178,7 +178,7 @@ class AdRepositoryImpl @Inject constructor(
         if (firestoreResult.isSuccess) {
             val ad = adDao.getAdById(adId)
             ad?.let {
-                adDao.updateAd(it.copy(isSold = true, soldToUserId = buyerUserId, soldTimestamp = soldTime))
+                adDao.updateAd(it.copy(sold = true, soldToUserId = buyerUserId, soldTimestamp = soldTime))
             }
         }
         firestoreResult

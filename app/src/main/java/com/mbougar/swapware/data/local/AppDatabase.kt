@@ -4,7 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.mbougar.swapware.data.model.Ad
 
-@Database(entities = [Ad::class, PoblacionLocation::class], version = 4, exportSchema = false)
+@Database(entities = [Ad::class, PoblacionLocation::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun adDao(): AdDao
     abstract fun poblacionDao(): PoblacionDao

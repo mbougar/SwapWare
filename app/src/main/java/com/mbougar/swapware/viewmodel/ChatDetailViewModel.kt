@@ -166,7 +166,7 @@ class ChatDetailViewModel @Inject constructor(
         val currentConversation = _uiState.value.conversationDetails ?: return
         val currentUserId = _uiState.value.currentUserId ?: return
 
-        if (ad.sellerId != currentUserId || ad.isSold) {
+        if (ad.sellerId != currentUserId || ad.sold) {
             _uiState.update { it.copy(error = "Cannot mark ad as sold.")}
             return
         }

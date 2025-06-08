@@ -3,6 +3,7 @@ package com.mbougar.swapware.data.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
 
 @Entity(tableName = "ads")
 data class Ad(
@@ -22,7 +23,7 @@ data class Ad(
     val sellerLocation: String? = null,
     val sellerLatitude: Double? = null,
     val sellerLongitude: Double? = null,
-    val isSold: Boolean = false,
+    var sold: Boolean = false,
     val soldToUserId: String? = null,
     val soldTimestamp: Long? = null
 )

@@ -100,7 +100,7 @@ fun ChatDetailScreen(
                 },
                 actions = {
                     if (ad != null && currentUserId == ad.sellerId &&
-                        conversation != null && !conversation.adIsSoldInThisConversation && !ad.isSold) {
+                        conversation != null && !conversation.adIsSoldInThisConversation && !ad.sold) {
                         IconButton(onClick = { viewModel.markAdAsSoldToOtherUser() }) {
                             Icon(Icons.Filled.Sell, contentDescription = "Mark as Sold")
                         }

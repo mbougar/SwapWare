@@ -79,7 +79,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
 
                     adsResult.onSuccess { ads ->
-                        var filteredAds = ads.filter { !it.isSold }
+                        var filteredAds = ads.filter { !it.sold }
                         if (category != null) {
                             filteredAds = filteredAds.filter { ad -> ad.category.equals(category, ignoreCase = true) }
                         }

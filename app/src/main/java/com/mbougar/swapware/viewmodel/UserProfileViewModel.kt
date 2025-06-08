@@ -52,7 +52,7 @@ class UserProfileViewModel @Inject constructor(
                 }
                 .collect { adsResult ->
                     if (adsResult.isSuccess) {
-                        val ads = adsResult.getOrNull()?.filter { !it.isSold } ?: emptyList()
+                        val ads = adsResult.getOrNull()?.filter { !it.sold } ?: emptyList()
                         _uiState.update {
                             it.copy(
                                 isLoading = false,

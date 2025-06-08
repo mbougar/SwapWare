@@ -162,22 +162,10 @@ class MessageRepositoryImpl @Inject constructor(
             Log.w("MessageRepo", "Failed to update conversation rating status, but rating was submitted.")
         }
 
-        val userProfileResult = firestoreSource.getUserProfile(rating.ratedUserId)
-        if (userProfileResult.isSuccess) {
-            val userProfile = userProfileResult.getOrNull() ?: UserProfileData(userId = rating.ratedUserId)
-
-            val newTotalPoints = (userProfile.totalRatingPoints) + rating.ratingValue
-            val newNumberOfRatings = (userProfile.numberOfRatings) + 1
-            val newAverage = if (newNumberOfRatings > 0) newTotalPoints.toFloat() / newNumberOfRatings else 0.0f
-
-            return@withContext firestoreSource.updateUserProfileRating(
-                rating.ratedUserId,
-                newTotalPoints,
-                newNumberOfRatings,
-                newAverage
-            )
+        return@withContext if (submitRatingResult.isSuccess) {
+            Result.success(Unit)
         } else {
-            return@withContext Result.failure(userProfileResult.exceptionOrNull() ?: Exception("Failed to get user profile for rating update"))
+            Result.failure(submitRatingResult.exceptionOrNull() ?: Exception("Failed to submit rating document."))
         }
     }
 }

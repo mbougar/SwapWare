@@ -190,6 +190,7 @@ fun SettingsSection(
             title = "My Ads",
             onClick = { navController.navigate(Screen.MyAds.route) }
         )
+        Divider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsItem(
             icon = Icons.Filled.Article,
             title = "Terms of Service",

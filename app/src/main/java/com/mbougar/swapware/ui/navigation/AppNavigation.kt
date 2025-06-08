@@ -24,6 +24,7 @@ import java.net.URLDecoder
 import com.mbougar.swapware.ui.screens.auth.RegisterScreen
 import com.mbougar.swapware.ui.screens.myads.MyAdsScreen
 import com.mbougar.swapware.ui.screens.tos.TermsOfServiceScreen
+import com.mbougar.swapware.ui.screens.userprofile.UserProfileScreen
 
 @Composable
 fun AppNavHost(
@@ -126,6 +127,14 @@ fun AppNavHost(
         }
         composable(Screen.TermsOfService.route) {
             TermsOfServiceScreen(navController = navController)
+        }
+        composable(
+            route = Screen.UserProfile.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
+            requireNotNull(userId) { "User ID is required for UserProfileScreen" }
+            UserProfileScreen(navController = navController, userId = userId)
         }
     }
 }

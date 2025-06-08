@@ -33,6 +33,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
     data object MyAds : Screen("my_ads", "My Ads", Icons.Filled.Storefront)
     data object TermsOfService : Screen("terms_of_service", "Terms of Service", Icons.Filled.Article)
+    data object UserProfile : Screen("user_profile/{userId}", "User Profile", Icons.Default.AccountCircle) {
+        fun createRoute(userId: String) = "user_profile/$userId"
+    }
 }
 
 val bottomNavItems = listOf(

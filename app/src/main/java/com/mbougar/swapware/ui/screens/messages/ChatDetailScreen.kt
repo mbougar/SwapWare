@@ -1,6 +1,7 @@
 package com.mbougar.swapware.ui.screens.messages
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mbougar.swapware.data.model.Message
+import com.mbougar.swapware.ui.navigation.Screen
 import com.mbougar.swapware.viewmodel.ChatDetailViewModel
 import com.mbougar.swapware.viewmodel.ChatListItem
 import kotlinx.coroutines.launch
@@ -55,6 +57,9 @@ fun ChatDetailScreen(
     val ad = uiState.adDetails
     val conversation = uiState.conversationDetails
     val currentUserId = uiState.currentUserId
+    val otherParticipantId = remember(conversation, currentUserId) {
+        conversation?.participantIds?.find { it != currentUserId }
+    }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
@@ -76,7 +81,15 @@ fun ChatDetailScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(otherUserDisplayName, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = uiState.otherUserDisplayName,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.clickable(enabled = otherParticipantId != null) {
+                                otherParticipantId?.let {
+                                    navController.navigate(Screen.UserProfile.createRoute(it))
+                                }
+                            }
+                        )
                         Text(adTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },

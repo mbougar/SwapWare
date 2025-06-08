@@ -119,13 +119,17 @@ fun AdDetailContent(
                 Text(
                     "Error: ${uiState.error}",
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp)
                 )
             }
             uiState.ad == null -> {
                 Text(
                     "Ad not found.",
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp)
                 )
             }
             else -> {
@@ -194,6 +198,8 @@ fun AdDetailContent(
                         }
                         Text("Contact Seller")
                     }
+
+                    Text(text = "${ad.isSold}")
                 }
             }
         }

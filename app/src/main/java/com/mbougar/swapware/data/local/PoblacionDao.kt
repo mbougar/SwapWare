@@ -13,7 +13,7 @@ interface PoblacionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(poblacion: PoblacionLocation)
 
-    @Query("SELECT * FROM poblaciones WHERE poblacionName LIKE :query || '%' OR provincia LIKE :query || '%' ORDER BY poblacionName ASC LIMIT :limit")
+    @Query("SELECT * FROM poblaciones WHERE poblacionName LIKE :query OR provincia LIKE :query ORDER BY poblacionName ASC LIMIT :limit")
     suspend fun searchPoblaciones(query: String, limit: Int = 20): List<PoblacionLocation>
 
     @Query("SELECT COUNT(*) FROM poblaciones")

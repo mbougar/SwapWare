@@ -18,7 +18,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.mbougar.swapware.HiltTestRunner"
     }
 
     buildTypes {
@@ -39,6 +39,25 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
+    packagingOptions {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE-notice.md"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/notice.txt"
+            excludes += "META-INF/ASL2.0"
+            excludes += "META-INF/*.kotlin_module"
+        }
     }
 }
 
@@ -105,6 +124,7 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation("com.google.truth:truth:1.4.2")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
 
@@ -113,6 +133,24 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("com.google.accompanist:accompanist-permissions:0.30.1")
+
+    // Coroutines and Flow Testing
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    testImplementation("app.cash.turbine:turbine:1.1.0")
+
+    // Mocking Library (MockK)
+    testImplementation("io.mockk:mockk:1.13.10")
+    androidTestImplementation("io.mockk:mockk-android:1.13.10")
+
+    // Truth Assertion Library
+    testImplementation("com.google.truth:truth:1.4.2")
+
+    // Room Testing
+    testImplementation("androidx.room:room-testing:2.7.0-alpha04")
+
+    // Hilt Testing
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
+    kaptAndroidTest("com.google.dagger:hilt-compiler:2.51.1")
 }
 
 kapt {

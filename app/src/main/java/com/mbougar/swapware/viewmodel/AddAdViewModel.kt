@@ -58,7 +58,7 @@ class AddAdViewModel @Inject constructor(
             searchJob = viewModelScope.launch {
                 kotlinx.coroutines.delay(300)
                 try {
-                    val results = poblacionDao.searchPoblaciones(query, limit = 10)
+                    val results = poblacionDao.searchPoblaciones("$query%", limit = 10)
                     _locationSuggestions.value = results
                     Log.d("AddAdViewModel", "Search for '$query' found ${results.size} suggestions.")
                 } catch (e: Exception) {

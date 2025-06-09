@@ -41,7 +41,7 @@ class LocationViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .flatMapLatest { query ->
                     try {
-                        flowOf(poblacionDao.searchPoblaciones(query))
+                        flowOf(poblacionDao.searchPoblaciones("$query%"))
                     } catch (e: Exception) {
                         flowOf(emptyList<PoblacionLocation>())
                     }

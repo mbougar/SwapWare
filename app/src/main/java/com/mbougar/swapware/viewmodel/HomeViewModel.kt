@@ -56,7 +56,7 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .flatMapLatest { query ->
                     try {
-                        flowOf(poblacionDao.searchPoblaciones(query, limit = 10))
+                        flowOf(poblacionDao.searchPoblaciones("$query%", limit = 10))
                     } catch (e: Exception) {
                         flowOf(emptyList<PoblacionLocation>())
                     }

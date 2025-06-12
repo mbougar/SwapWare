@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.sp
 val DefaultTypography = Typography()
 
 val AppTypography = Typography(
-    displayLarge = DefaultTypography.displayLarge.copy(fontFamily = FontFamily.SansSerif /* or YourCustomFontFamily */),
+    displayLarge = DefaultTypography.displayLarge.copy(fontFamily = FontFamily.SansSerif),
     displayMedium = DefaultTypography.displayMedium.copy(fontFamily = FontFamily.SansSerif),
     displaySmall = DefaultTypography.displaySmall.copy(fontFamily = FontFamily.SansSerif),
 

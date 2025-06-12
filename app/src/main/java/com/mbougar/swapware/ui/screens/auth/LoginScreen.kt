@@ -130,7 +130,6 @@ fun LoginScreenContent(
                     )
                 )
             }
-            // TODO agregar olvidado contraseña
         }
     }
 }

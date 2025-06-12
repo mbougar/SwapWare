@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda el estado para la pantalla de "Mis Anuncios".
+ */
 data class MyAdsUiState(
     val ads: List<Ad> = emptyList(),
     val isLoading: Boolean = true,
@@ -17,6 +20,9 @@ data class MyAdsUiState(
     val currentUserId: String? = null
 )
 
+/**
+ * ViewModel para la pantalla que muestra los anuncios del propio usuario.
+ */
 @HiltViewModel
 class MyAdsViewModel @Inject constructor(
     private val adRepository: AdRepository,
@@ -36,6 +42,10 @@ class MyAdsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Carga los anuncios publicados por un usuario específico.
+     * @param userId El ID del usuario.
+     */
     private fun loadMyAds(userId: String) {
         viewModelScope.launch {
             adRepository.getAdsByUserId(userId)
@@ -51,6 +61,11 @@ class MyAdsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Cambia el estado de favorito de un anuncio.
+     * @param adId El ID del anuncio.
+     * @param currentUserId El ID del usuario logueado.
+     */
     fun toggleFavorite(adId: String, currentUserId: String?) {
         val adToToggle = _uiState.value.ads.find { it.id == adId }
         if (adToToggle != null && adToToggle.sellerId == currentUserId) {

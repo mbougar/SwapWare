@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda el estado de la pantalla de favoritos.
+ */
 data class FavoritesUiState(
     val favoriteAds: List<Ad> = emptyList(),
     val currentUserId: String? = null,
@@ -17,6 +20,9 @@ data class FavoritesUiState(
     val error: String? = null
 )
 
+/**
+ * ViewModel para la pantalla de Favoritos.
+ */
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
     private val adRepository: AdRepository,
@@ -31,6 +37,9 @@ class FavoritesViewModel @Inject constructor(
         loadFavoriteAds()
     }
 
+    /**
+     * Carga la lista de anuncios que el usuario ha marcado como favoritos.
+     */
     private fun loadFavoriteAds() {
         viewModelScope.launch {
             adRepository.getFavoriteAds()
@@ -44,6 +53,10 @@ class FavoritesViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Quita un anuncio de la lista de favoritos.
+     * @param adId El ID del anuncio a quitar.
+     */
     fun removeFromFavorites(adId: String) {
         viewModelScope.launch {
             adRepository.toggleFavorite(adId, false)

@@ -1,5 +1,11 @@
 package com.mbougar.swapware.data.model
 
+/**
+ * Define todas las categorías de hardware posibles para clasificar los anuncios.
+ * Es una lista fija de opciones para que el usuario elija.
+ *
+ * @param displayName El nombre de la categoría que se muestra en la UI.
+ */
 enum class HardwareCategory(val displayName: String) {
     CPU("CPU"),
     GPU("GPU"),

@@ -216,7 +216,7 @@ fun AddAdScreen(
                         DropdownMenuItem(
                             text = { Text("No matching locations found.") },
                             onClick = { locationDropdownExpanded = false },
-                            enabled = false // Make it non-clickable
+                            enabled = false
                         )
                     }
                 }

@@ -151,7 +151,7 @@ fun AdDetailContent(
                             contentDescription = ad.title,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(250.dp), // TODO decidir tamaño
+                                .height(250.dp),
                             contentScale = ContentScale.Crop
                         )
                         Spacer(modifier = Modifier.height(16.dp))

@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * ViewModel para manejar la lógica de búsqueda de ubicaciones.
+ */
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LocationViewModel @Inject constructor(
@@ -52,6 +55,10 @@ class LocationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Se llama cuando el texto de búsqueda cambia.
+     * @param query El nuevo texto de búsqueda.
+     */
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
         if (query.isBlank() || query.length <=1) {
@@ -59,12 +66,19 @@ class LocationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Se llama cuando el usuario selecciona una población de la lista.
+     * @param poblacion La población seleccionada.
+     */
     fun onPoblacionSelected(poblacion: PoblacionLocation?) {
         _selectedPoblacion.value = poblacion
         _searchQuery.value = poblacion?.getDisplayName() ?: ""
         _searchResults.value = emptyList()
     }
 
+    /**
+     * Limpia la selección de población y el texto de búsqueda.
+     */
     fun clearSelection() {
         _selectedPoblacion.value = null
         _searchQuery.value = ""

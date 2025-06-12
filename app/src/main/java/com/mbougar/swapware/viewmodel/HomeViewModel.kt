@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda todo el estado de la pantalla de inicio.
+ */
 data class HomeUiState(
     val ads: List<Ad> = emptyList(),
     val currentUserId: String? = null,
@@ -27,8 +30,14 @@ data class HomeUiState(
     val locationSuggestions: List<PoblacionLocation> = emptyList()
 )
 
+/**
+ * Una clase de datos simple para agrupar cuatro valores.
+ */
 data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
+/**
+ * ViewModel para la pantalla de inicio (Home).
+ */
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -67,6 +76,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Carga los anuncios y aplica los filtros.
+     */
     private fun loadAds() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -102,19 +114,35 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Actualiza el filtro de categoría.
+     * @param category La nueva categoría, o null para quitar el filtro.
+     */
     fun filterByCategory(category: String?) {
         _selectedCategoryFlow.value = category
     }
 
+    /**
+     * Establece la ubicación para el filtro de distancia.
+     * @param poblacion La ubicación seleccionada.
+     */
     fun setDistanceFilterLocation(poblacion: PoblacionLocation?) {
         _userPoblacionForFilterFlow.value = poblacion
         _uiState.update { it.copy(userPoblacionForFilter = poblacion, locationSearchQuery = poblacion?.getDisplayName() ?: "", locationSuggestions = emptyList()) }
     }
 
+    /**
+     * Establece el valor del filtro de distancia en kilómetros.
+     * @param distance La distancia en km, o null para quitarlo.
+     */
     fun setFilterDistanceKm(distance: Float?) {
         _filterDistanceKmFlow.value = distance
     }
 
+    /**
+     * Se llama cuando el texto de búsqueda de ubicación del filtro cambia.
+     * @param query El nuevo texto de búsqueda.
+     */
     fun onFilterLocationSearchQueryChanged(query: String) {
         _uiState.update { it.copy(locationSearchQuery = query) }
         if (query.isBlank() || query.length <= 1) {
@@ -127,7 +155,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-
+    /**
+     * Cambia el estado de favorito de un anuncio.
+     * @param adId El ID del anuncio a cambiar.
+     */
     fun toggleFavorite(adId: String) {
         viewModelScope.launch {
             val currentAds = _uiState.value.ads
@@ -146,6 +177,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Vuelve a cargar los anuncios desde la red.
+     */
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }

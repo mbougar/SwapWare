@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda el estado de la pantalla de detalle de un anuncio.
+ */
 data class AdDetailUiState(
     val ad: Ad? = null,
     val currentUserId: String? = null,
@@ -23,6 +26,9 @@ data class AdDetailUiState(
     val navigateToConversationId: String? = null
 )
 
+/**
+ * ViewModel para la pantalla de detalle de un anuncio.
+ */
 @HiltViewModel
 class AdDetailViewModel @Inject constructor(
     private val adRepository: AdRepository,
@@ -41,6 +47,9 @@ class AdDetailViewModel @Inject constructor(
         loadAdDetails()
     }
 
+    /**
+     * Carga los detalles del anuncio desde el repositorio.
+     */
     private fun loadAdDetails() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -57,6 +66,9 @@ class AdDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Cambia el estado de favorito del anuncio.
+     */
     fun toggleFavorite() {
         val currentAd = _uiState.value.ad ?: return
         if (_uiState.value.isOwnAd) return
@@ -66,6 +78,9 @@ class AdDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Inicia una conversación con el vendedor del anuncio.
+     */
     fun initiateConversation() {
         val currentAd = _uiState.value.ad ?: return
 
@@ -81,6 +96,9 @@ class AdDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Resetea los flags de navegación y error una vez que se han gestionado.
+     */
     fun navigationOrErrorHandled() {
         _uiState.update { it.copy(navigateToConversationId = null, conversationError = null) }
     }

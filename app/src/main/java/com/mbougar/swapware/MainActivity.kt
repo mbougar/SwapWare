@@ -19,9 +19,16 @@ import com.mbougar.swapware.ui.theme.SwapWareTheme
 import com.mbougar.swapware.viewmodel.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * Esta es la actividad principal, el punto de entrada de la aplicación.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    /**
+     * Este método se llama cuando se crea la actividad.
+     * Aquí es donde configuramos la vista principal de la app.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -32,6 +39,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Este es el composable principal que organiza la navegación
+ * y la barra de navegación inferior.
+ */
 @Composable
 fun Content() {
     val navController = rememberNavController()
@@ -43,6 +54,7 @@ fun Content() {
 
     val shouldShowBottomBar = bottomNavItems.any { it.route == currentDestination?.route }
 
+    // Scaffold es como un esqueleto para la pantalla, nos da lugares para poner cosas.
     Scaffold(
         bottomBar = {
             if (shouldShowBottomBar) {
@@ -51,12 +63,15 @@ fun Content() {
                         NavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = screen.title) },
                             label = { Text(screen.title) },
+                            // Marcamos como seleccionado el ítem de la pantalla actual.
                             selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                             onClick = {
                                 navController.navigate(screen.route) {
+                                    // Con esta llamada evitamos apilar pantallas infinitamente.
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
                                     }
+                                    // Evita lanzar la misma pantalla si ya estamos en ella.
                                     launchSingleTop = true
                                     restoreState = true
                                 }

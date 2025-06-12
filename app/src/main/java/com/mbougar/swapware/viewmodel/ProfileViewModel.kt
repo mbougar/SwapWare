@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mbougar.swapware.data.repository.AuthRepository
-import com.google.firebase.auth.FirebaseUser // Ensure this is imported
 import com.mbougar.swapware.data.model.UserProfileData
 import com.mbougar.swapware.data.remote.FirebaseStorageSource
 import com.mbougar.swapware.data.remote.FirestoreSource
@@ -16,6 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda el estado de la pantalla de perfil del usuario logueado.
+ */
 data class ProfileUiState(
     val userEmail: String? = null,
     val userDisplayName: String? = null,
@@ -27,6 +29,9 @@ data class ProfileUiState(
     val showDeleteAccountDialog: Boolean = false
 )
 
+/**
+ * ViewModel para la pantalla de perfil del propio usuario.
+ */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
@@ -41,6 +46,9 @@ class ProfileViewModel @Inject constructor(
         loadUserProfile()
     }
 
+    /**
+     * Carga los datos del perfil del usuario logueado.
+     */
     fun loadUserProfile() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -67,6 +75,10 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Se llama cuando el usuario selecciona una nueva foto de perfil.
+     * @param imageUri La URI de la imagen seleccionada.
+     */
     fun onProfilePictureSelected(imageUri: Uri) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isUploadingPicture = true, pictureUploadError = null)
@@ -102,21 +114,33 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Limpia el error de subida de imagen después de mostrarlo.
+     */
     fun clearPictureUploadError() {
         _uiState.value = _uiState.value.copy(pictureUploadError = null)
     }
 
+    /**
+     * Cierra la sesión del usuario.
+     */
     fun logout() {
         authRepository.logout()
     }
 
+    /**
+     * Muestra u oculta el diálogo de confirmación para borrar la cuenta.
+     * @param show true para mostrar, false para ocultar.
+     */
     fun onShowDeleteAccountDialog(show: Boolean) {
         _uiState.value = _uiState.value.copy(showDeleteAccountDialog = show)
     }
 
+    /**
+     * Borra la cuenta del usuario. (Actualmente solo cierra sesión).
+     */
     fun deleteAccount() {
         viewModelScope.launch {
-            // TODO: Implement actual account deletion logic
             Log.d("ProfileViewModel", "Account deletion requested but not yet implemented.")
             _uiState.value = _uiState.value.copy(showDeleteAccountDialog = false)
             logout()

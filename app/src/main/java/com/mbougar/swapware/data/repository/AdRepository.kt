@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface AdRepository {
     fun getAds(): Flow<Result<List<Ad>>>
-    fun getFavoriteAds(): Flow<List<Ad>> // TODO decidir si quiero guardar los favoritos en la nube o solo localmente
+    fun getFavoriteAds(): Flow<List<Ad>>
     suspend fun addAd(adData: NewAdData): Result<Unit>
     suspend fun updateAd(ad: Ad): Result<Unit>
     suspend fun deleteAd(ad: Ad): Result<Unit>

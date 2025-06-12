@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda el estado para la pantalla de perfil de otro usuario.
+ */
 data class UserProfileScreenUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
@@ -22,6 +25,9 @@ data class UserProfileScreenUiState(
     val userAds: List<Ad> = emptyList()
 )
 
+/**
+ * ViewModel para la pantalla de perfil de usuario (cuando vemos el perfil de otro).
+ */
 @HiltViewModel
 class UserProfileViewModel @Inject constructor(
     private val firestoreSource: FirestoreSource,
@@ -39,6 +45,10 @@ class UserProfileViewModel @Inject constructor(
         _currentLoggedInUserId.value = authRepository.getCurrentUser()?.uid
     }
 
+    /**
+     * Carga el perfil de un usuario específico.
+     * @param userId El ID del usuario cuyo perfil queremos ver.
+     */
     fun loadUserProfile(userId: String) {
         viewModelScope.launch {
             _uiState.value = UserProfileScreenUiState(isLoading = true)
@@ -83,6 +93,11 @@ class UserProfileViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Cambia el estado de favorito de un anuncio.
+     * @param adId El ID del anuncio.
+     * @param loggedInUserId El ID del usuario logueado.
+     */
     fun toggleFavorite(adId: String, loggedInUserId: String?) {
         if (loggedInUserId == null) return
 

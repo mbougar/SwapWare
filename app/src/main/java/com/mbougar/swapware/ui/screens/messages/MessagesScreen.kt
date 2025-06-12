@@ -39,7 +39,7 @@ fun MessagesScreen(
             modifier = Modifier.padding(paddingValues),
             uiState = uiState,
             navController = navController,
-            onRefresh = { viewModel.refresh() } // TODO refresh aqui tambien?
+            onRefresh = { viewModel.refresh() }
         )
     }
 }
@@ -73,7 +73,6 @@ fun MessagesContent(
                 Text("You have no messages yet.", modifier = Modifier.align(Alignment.Center))
             }
             else -> {
-                // refresh?
                 LazyColumn(
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
@@ -124,8 +123,6 @@ fun ConversationItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // TODO: añadir avatar usuario
-
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -159,7 +156,6 @@ fun ConversationItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = if (conversation.lastMessageSnippet != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                // TODO: Indicador de mensajes no leidos?
             )
         }
     }

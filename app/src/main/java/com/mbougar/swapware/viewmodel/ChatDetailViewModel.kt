@@ -18,6 +18,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Contiene todo el estado para la pantalla de detalle del chat.
+ */
 data class ChatDetailUiState(
     val chatListItems: List<ChatListItem> = emptyList(),
     val inputText: String = "",
@@ -33,11 +36,19 @@ data class ChatDetailUiState(
     val ratingSubmissionInProgress: Boolean = false,
 )
 
+/**
+ * Representa un item en la lista del chat. Puede ser un mensaje o un separador de fecha.
+ */
 sealed class ChatListItem {
     data class MessageItem(val message: Message) : ChatListItem()
     data class DateSeparatorItem(val date: String) : ChatListItem()
 }
 
+/**
+ * Agrupa los mensajes por día y añade separadores de fecha.
+ * @param messages La lista de mensajes a agrupar.
+ * @return Una lista de ChatListItem con mensajes y fechas.
+ */
 fun groupMessagesWithDateSeparators(messages: List<Message>): List<ChatListItem> {
     if (messages.isEmpty()) return emptyList()
 
@@ -62,6 +73,11 @@ fun groupMessagesWithDateSeparators(messages: List<Message>): List<ChatListItem>
     return groupedItems
 }
 
+/**
+ * Formatea una fecha para el separador, mostrando "Hoy", "Ayer" o la fecha.
+ * @param date La fecha a formatear.
+ * @return El texto formateado.
+ */
 fun formatDateSeparator(date: Date): String {
     val today = Calendar.getInstance()
     val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
@@ -78,6 +94,9 @@ fun formatDateSeparator(date: Date): String {
     }
 }
 
+/**
+ * ViewModel para la pantalla de detalle del chat.
+ */
 @HiltViewModel
 class ChatDetailViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
@@ -91,6 +110,7 @@ class ChatDetailViewModel @Inject constructor(
 
     private val adIdFromConversation: MutableStateFlow<String?> = MutableStateFlow(null)
 
+    // Flujo para el estado de la UI.
     private val _uiState = MutableStateFlow(
         ChatDetailUiState(
             currentUserId = authRepository.getCurrentUser()?.uid,
@@ -118,6 +138,9 @@ class ChatDetailViewModel @Inject constructor(
         loadMessages()
     }
 
+    /**
+     * Carga los mensajes de la conversación.
+     */
     private fun loadMessages() {
         viewModelScope.launch {
             messageRepository.getMessagesStream(conversationId)
@@ -139,10 +162,17 @@ class ChatDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Se llama cuando el usuario cambia el texto en el campo de entrada.
+     * @param newText El nuevo texto.
+     */
     fun onInputTextChanged(newText: String) {
         _uiState.update { it.copy(inputText = newText) }
     }
 
+    /**
+     * Envía el mensaje escrito por el usuario.
+     */
     fun sendMessage() {
         val textToSend = _uiState.value.inputText.trim()
         if (textToSend.isBlank() || _uiState.value.isSending) {
@@ -161,6 +191,9 @@ class ChatDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Marca el anuncio como vendido al otro usuario del chat.
+     */
     fun markAdAsSoldToOtherUser() {
         val ad = _uiState.value.adDetails ?: return
         val currentConversation = _uiState.value.conversationDetails ?: return
@@ -195,14 +228,25 @@ class ChatDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Muestra el diálogo para valorar a un usuario.
+     * @param userIdToRate El ID del usuario que se va a valorar.
+     */
     fun onAttemptToRateUser(userIdToRate: String) {
         _uiState.update { it.copy(showRatingDialogForUser = userIdToRate) }
     }
 
+    /**
+     * Cierra el diálogo de valoración.
+     */
     fun onDismissRatingDialog() {
         _uiState.update { it.copy(showRatingDialogForUser = null) }
     }
 
+    /**
+     * Envía la valoración de un usuario.
+     * @param ratingValue La puntuación (de 1 a 5).
+     */
     fun submitRating(ratingValue: Int) {
         val ratedUserId = _uiState.value.showRatingDialogForUser ?: return
         val raterUserId = _uiState.value.currentUserId ?: return
@@ -251,6 +295,9 @@ class ChatDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Limpia el mensaje de error del estado de la UI.
+     */
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }

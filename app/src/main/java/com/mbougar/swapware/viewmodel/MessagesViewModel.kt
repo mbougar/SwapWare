@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda el estado para la pantalla de la lista de mensajes (conversaciones).
+ */
 data class MessagesUiState(
     val conversations: List<Conversation> = emptyList(),
     val isLoading: Boolean = true,
@@ -17,6 +20,9 @@ data class MessagesUiState(
     val currentUserId: String? = null
 )
 
+/**
+ * ViewModel para la pantalla de mensajes.
+ */
 @HiltViewModel
 class MessagesViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
@@ -30,6 +36,9 @@ class MessagesViewModel @Inject constructor(
         loadConversations()
     }
 
+    /**
+     * Carga la lista de conversaciones del usuario actual.
+     */
     private fun loadConversations() {
         viewModelScope.launch {
             messageRepository.getConversationsStream()
@@ -58,6 +67,9 @@ class MessagesViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Vuelve a cargar las conversaciones, para el "pull to refresh".
+     */
     fun refresh() {
         loadConversations()
     }

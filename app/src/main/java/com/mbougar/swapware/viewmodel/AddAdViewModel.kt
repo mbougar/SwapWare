@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Guarda el estado de la pantalla de "Añadir Anuncio".
+ */
 data class AddAdUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -25,11 +28,16 @@ data class AddAdUiState(
     val selectedPoblacion: PoblacionLocation? = null,
 )
 
+/**
+ * Eventos que el ViewModel puede enviar a la UI, como mostrar un mensaje.
+ */
 sealed class AddAdScreenEvent {
     data class ShowSnackbar(val message: String, val durationLong: Boolean = false) : AddAdScreenEvent()
 }
 
-
+/**
+ * ViewModel para la pantalla de añadir un nuevo anuncio.
+ */
 @HiltViewModel
 class AddAdViewModel @Inject constructor(
     private val adRepository: AdRepository,
@@ -50,6 +58,10 @@ class AddAdViewModel @Inject constructor(
 
     private var searchJob: kotlinx.coroutines.Job? = null
 
+    /**
+     * Se llama cuando el usuario cambia el texto en el buscador de ubicación.
+     * @param query El nuevo texto.
+     */
     fun onLocationSearchQueryChanged(query: String) {
         _locationSearchQuery.value = query
         searchJob?.cancel()
@@ -75,6 +87,10 @@ class AddAdViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Se llama cuando el usuario selecciona una ubicación de la lista de sugerencias.
+     * @param poblacion La ubicación seleccionada.
+     */
     fun onPoblacionSelected(poblacion: PoblacionLocation) {
         _uiState.update { it.copy(selectedPoblacion = poblacion) }
         _locationSearchQuery.value = poblacion.getDisplayName()
@@ -82,6 +98,14 @@ class AddAdViewModel @Inject constructor(
         searchJob?.cancel()
     }
 
+    /**
+     * Crea y publica un nuevo anuncio.
+     * @param title El título del anuncio.
+     * @param description La descripción.
+     * @param priceStr El precio como texto.
+     * @param category La categoría.
+     * @param imageUri La URI de la imagen seleccionada (si la hay).
+     */
     fun addAd(
         title: String,
         description: String,
@@ -125,16 +149,25 @@ class AddAdViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Resetea el estado de la pantalla a sus valores iniciales.
+     */
     fun resetState() {
         _uiState.value = AddAdUiState()
         _locationSearchQuery.value = ""
         _locationSuggestions.value = emptyList()
     }
 
+    /**
+     * Limpia el mensaje de error después de haberlo mostrado.
+     */
     fun consumeError() {
         _uiState.update { it.copy(error = null) }
     }
 
+    /**
+     * Limpia el flag de éxito después de haberlo usado (por ejemplo, para navegar).
+     */
     fun consumeSuccess() {
         _uiState.update { it.copy(isSuccess = false) }
     }

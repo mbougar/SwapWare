@@ -1,31 +1,34 @@
 package com.mbougar.swapware.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier // Add Modifier import
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.mbougar.swapware.ui.screens.addad.AddAdScreen
 import com.mbougar.swapware.ui.screens.auth.LoginScreen
+import com.mbougar.swapware.ui.screens.auth.RegisterScreen
 import com.mbougar.swapware.ui.screens.details.AdDetailScreen
 import com.mbougar.swapware.ui.screens.favorites.FavoritesScreen
 import com.mbougar.swapware.ui.screens.home.HomeScreen
 import com.mbougar.swapware.ui.screens.messages.ChatDetailScreen
 import com.mbougar.swapware.ui.screens.messages.MessagesScreen
-import com.mbougar.swapware.ui.screens.profile.ProfileScreen
-import java.net.URLDecoder
-import com.mbougar.swapware.ui.screens.auth.RegisterScreen
 import com.mbougar.swapware.ui.screens.myads.MyAdsScreen
+import com.mbougar.swapware.ui.screens.profile.ProfileScreen
 import com.mbougar.swapware.ui.screens.tos.TermsOfServiceScreen
 import com.mbougar.swapware.ui.screens.userprofile.UserProfileScreen
+import java.net.URLDecoder
 
+/**
+ * Composable que define el grafo de navegación de la aplicación.
+ * Decide qué pantalla mostrar según la ruta actual.
+ * @param navController El controlador para navegar entre pantallas.
+ * @param startDestination La ruta de la pantalla inicial.
+ * @param modifier Modificador de Compose.
+ */
 @Composable
 fun AppNavHost(
     navController: NavHostController,
@@ -51,7 +54,7 @@ fun AppNavHost(
                 }
             )
         }
-        composable(Screen.Register.route) { // New Route
+        composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = {
                     navController.navigate(Screen.Home.route) {

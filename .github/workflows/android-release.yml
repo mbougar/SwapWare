@@ -34,10 +34,13 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew assembleRelease
 
+      - name: Rename APK
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/SwapWare-${{ github.ref_name }}.apk
+
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
-          files: app/build/outputs/apk/release/SwapWare.apk
+          files: app/build/outputs/apk/release/SwapWare-${{ github.ref_name }}.apk

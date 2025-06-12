@@ -21,6 +21,18 @@ android {
         testInstrumentationRunner = "com.mbougar.swapware.HiltTestRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFile = System.getenv("RELEASE_KEYSTORE_FILE") ?: ""
+            if (storeFile.isNotEmpty()) {
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                this.storeFile = file(storeFile)
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,6 +40,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

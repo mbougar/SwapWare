@@ -10,7 +10,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
 
@@ -31,11 +30,18 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew assembleRelease
+      - name: Build and Sign APK
+        run: |
+          echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > ${{ github.workspace }}/release.jks
+          ./gradlew assembleRelease
+        env:
+          RELEASE_KEYSTORE_FILE: ${{ github.workspace }}/release.jks
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
 
       - name: Rename APK
-        run: mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/SwapWare-${{ github.ref_name }}.apk
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/SwapWare-${{ github.ref_name }}.apk
 
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2

@@ -54,7 +54,7 @@ fun Content() {
 
     val shouldShowBottomBar = bottomNavItems.any { it.route == currentDestination?.route }
 
-    // Scaffold es como un esqueleto para la pantalla, nos da lugares para poner cosas.
+    // Scaffold es como un esqueleto para la pantalla, nos da lugares para poner cosas
     Scaffold(
         bottomBar = {
             if (shouldShowBottomBar) {
